@@ -22,6 +22,7 @@ func main() {
 		log.Fatal("PORT is not set in .env file")
 	}
 
+	routes.InitRoutes(r, db)
 
 	r.Run(fmt.Sprintf(":%s", port))
 	fmt.Println("Server is running on port 8080")
