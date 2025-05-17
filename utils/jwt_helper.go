@@ -18,7 +18,7 @@ func GenerateJWT(user dto.User, jwtType string) (string, error) {
 		secretKey = []byte(os.Getenv("JWT_REFRESH_SECRET"))
 	}
 
-	if secretKey == nil {
+	if len(secretKey) == 0 {
 		log.Fatal("JWT secret key is not set in the environment variables")
 	}
 
@@ -45,7 +45,7 @@ func ValidateJWT(tokenString string, jwtType string) (jwt.MapClaims, error) {
 		secretKey = []byte(os.Getenv("JWT_REFRESH_SECRET"))
 	}
 
-	if secretKey == nil {
+	if len(secretKey) == 0 {
 		log.Fatal("JWT secret key is not set in the environment variables")
 	}
 
