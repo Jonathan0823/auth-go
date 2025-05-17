@@ -56,7 +56,8 @@ func ValidateJWT(tokenString string, jwtType string) (jwt.MapClaims, error) {
 		log.Fatal("JWT secret key is not set in the environment variables")
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, &jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -66,10 +67,9 @@ func ValidateJWT(tokenString string, jwtType string) (jwt.MapClaims, error) {
 		return nil, err
 	}
 
-	claims, ok := token.Claims.(*jwt.MapClaims)
-	if !ok || !token.Valid {
+	if !token.Valid {
 		return nil, fmt.Errorf("invalid token")
 	}
 
-	return *claims, nil
+	return claims, nil
 }
