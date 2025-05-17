@@ -18,6 +18,13 @@ func GenerateJWT(user dto.User, jwtType string) (string, error) {
 		secretKey = []byte(os.Getenv("JWT_REFRESH_SECRET"))
 	}
 
+	var expirationTime time.Time
+	if jwtType == "access" {
+		expirationTime = time.Now().Add(time.Minute * 15)
+	} else if jwtType == "refresh" {
+		expirationTime = time.Now().Add(time.Hour * 24 * 7)
+	}
+
 	if len(secretKey) == 0 {
 		log.Fatal("JWT secret key is not set in the environment variables")
 	}
@@ -27,7 +34,7 @@ func GenerateJWT(user dto.User, jwtType string) (string, error) {
 	claims := token.Claims.(jwt.MapClaims)
 	claims["username"] = user.Username
 	claims["email"] = user.Email
-	claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
+	claims["exp"] = expirationTime.Unix()
 
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
