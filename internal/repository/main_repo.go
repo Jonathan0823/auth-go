@@ -11,6 +11,9 @@ type Repository interface {
 	GetUserByID(id int) (dto.User, error)
 	GetUserByEmail(email string) (dto.User, error)
 	CreateUser(user dto.User) error
+	GetAllUsers() ([]dto.User, error)
+	UpdateUser(user dto.User) error
+	DeleteUser(id int) error
 }
 
 type repository struct {

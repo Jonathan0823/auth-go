@@ -41,3 +41,42 @@ func (r *repository) CreateUser(user dto.User) error {
 	}
 	return nil
 }
+
+func (r *repository) GetAllUsers() ([]dto.User, error) {
+	var users []dto.User
+	query := "SELECT id, username, email, updated_at, created_at FROM users"
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var user dto.User
+		err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+func (r *repository) UpdateUser(user dto.User) error {
+	query := "UPDATE users SET username = $1, email = $2 WHERE id = $3"
+	_, err := r.db.Exec(query, user.Username, user.Email, user.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repository) DeleteUser(id int) error {
+	query := "DELETE FROM users WHERE id = $1"
+	_, err := r.db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
