@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	Port  string
-	DBURL string
+	Port           string
+	AllowedOrigins string
 }
 
 func InitDB() *sql.DB {

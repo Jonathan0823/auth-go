@@ -12,8 +12,8 @@ import (
 
 func NewServer() *Config {
 	return &Config{
-		Port:  os.Getenv("PORT"),
-		DBURL: os.Getenv("DATABASE_URL"),
+		Port:           os.Getenv("PORT"),
+		AllowedOrigins: os.Getenv("ALLOWED_ORIGINS"),
 	}
 }
 
@@ -21,13 +21,14 @@ func (config *Config) InitServer(r *gin.Engine) {
 	if config.Port == "" {
 		config.Port = "8080"
 	}
-	if config.DBURL == "" {
-		log.Fatal("DATABASE_URL is not set in .env file")
+
+	if config.AllowedOrigins == "" || config.Port == "" {
+		log.Fatal("ALLOWED_ORIGINS or PORT is not set in .env file")
 	}
 
 	r.Use(gin.Logger())
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
+		AllowOrigins:     []string{config.AllowedOrigins},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
