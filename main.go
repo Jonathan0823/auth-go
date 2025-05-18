@@ -20,6 +20,8 @@ func main() {
 	defer db.Close()
 
 	r := gin.New()
+	r.Use(gin.Logger())
+
 	routes.RegisterRoutes(r, db)
 
 	config.NewServer().InitServer(r)

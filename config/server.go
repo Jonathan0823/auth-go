@@ -26,7 +26,6 @@ func (config *Config) InitServer(r *gin.Engine) {
 		log.Fatal("ALLOWED_ORIGINS or PORT is not set in .env file")
 	}
 
-	r.Use(gin.Logger())
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{config.AllowedOrigins},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
