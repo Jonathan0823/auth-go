@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/Jonathan0823/auth-go/internal/handler"
+	"github.com/Jonathan0823/auth-go/internal/middleware"
 	"github.com/Jonathan0823/auth-go/internal/repository"
 	"github.com/Jonathan0823/auth-go/internal/service"
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,7 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 	}
 
 	user := api.Group("/user")
+	user.Use(middleware.AuthMiddleware)
 	{
 		user.GET("/:id", mainHandler.GetUserByID)
 	}
