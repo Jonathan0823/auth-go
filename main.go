@@ -20,10 +20,9 @@ func main() {
 	defer db.Close()
 
 	r := gin.New()
+	routes.RegisterRoutes(r, db)
 
 	config.NewServer().InitServer(r)
-
-	routes.RegisterRoutes(r, db)
 
 	fmt.Println("Server is running on port 8080")
 }
