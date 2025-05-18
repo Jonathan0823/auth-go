@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Jonathan0823/auth-go/internal/dto"
+	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -46,4 +47,44 @@ func (h *MainHandler) Login(c *gin.Context) {
 	c.SetCookie("refresh_token", refresh_token, 7*24*3600, "/", domain, false, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully", "token": gin.H{"access_token": access_token, "refresh_token": refresh_token}})
+}
+
+func (h *MainHandler) Logout(c *gin.Context) {
+	c.SetCookie("access_token", "", -1, "/", os.Getenv("DOMAIN"), false, false)
+	c.SetCookie("refresh_token", "", -1, "/", os.Getenv("DOMAIN"), false, true)
+
+	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"})
+}
+
+func (h *MainHandler) Refresh(c *gin.Context) {
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token not found"})
+		return
+	}
+
+	if refreshToken == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token is empty"})
+		return
+	}
+
+	claims, err := utils.ValidateJWT(refreshToken, "refresh")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
+	}
+
+	accessToken, err := utils.GenerateJWT(dto.User{Username: claims["username"].(string), Email: claims["email"].(string)}, "access")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
+		return
+	}
+
+	domain := os.Getenv("DOMAIN")
+	if domain == "" {
+		domain = "localhost"
+	}
+
+	c.SetCookie("access_token", accessToken, 15*60, "/", domain, false, false)
+	c.JSON(http.StatusOK, gin.H{"message": "Access token refreshed successfully"})
 }
