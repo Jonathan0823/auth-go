@@ -41,7 +41,7 @@ func (h *MainHandler) GetUserByEmail(c *gin.Context) {
 
 	user, err := h.svc.GetUserByEmail(email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -56,7 +56,7 @@ func (h *MainHandler) UpdateUser(c *gin.Context) {
 	}
 
 	if err := h.svc.UpdateUser(user, c); err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -72,7 +72,7 @@ func (h *MainHandler) DeleteUser(c *gin.Context) {
 	}
 
 	if err := h.svc.DeleteUser(idInt, c); err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
