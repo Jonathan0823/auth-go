@@ -28,6 +28,10 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 	user.Use(middleware.AuthMiddleware)
 	{
 		user.GET("/:id", mainHandler.GetUserByID)
+		user.GET("/get-all", mainHandler.GetAllUsers)
+		user.GET("/email", mainHandler.GetUserByEmail)
+		user.PATCH("/update", mainHandler.UpdateUser)
+		user.DELETE("/delete/:id", mainHandler.DeleteUser)
 	}
 
 }
