@@ -6,6 +6,10 @@ import (
 )
 
 type Service interface {
+	//auth service
+	Register(user dto.User) error
+	Login(user dto.User) (string, string, error)
+
 	// user service
 	GetUserByID(id int) (dto.User, error)
 }
