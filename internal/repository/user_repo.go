@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Jonathan0823/auth-go/internal/dto"
+	"github.com/Jonathan0823/auth-go/internal/models"
 )
 
-func (r *repository) GetUserByID(id int) (dto.User, error) {
-	var user dto.User
+func (r *repository) GetUserByID(id int) (models.User, error) {
+	var user models.User
 	query := "SELECT id, username, email, updated_at, created_at FROM users WHERE id = $1"
 	err := r.db.QueryRow(query, id).Scan(&user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
 	if err != nil {
@@ -21,8 +21,8 @@ func (r *repository) GetUserByID(id int) (dto.User, error) {
 	return user, nil
 }
 
-func (r *repository) GetUserByEmail(email string) (dto.User, error) {
-	var user dto.User
+func (r *repository) GetUserByEmail(email string) (models.User, error) {
+	var user models.User
 	query := "SELECT id, username, email, password, updated_at, created_at FROM users WHERE email = $1"
 	err := r.db.QueryRow(query, email).Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.UpdatedAt, &user.CreatedAt)
 	if err != nil {
@@ -34,7 +34,7 @@ func (r *repository) GetUserByEmail(email string) (dto.User, error) {
 	return user, nil
 }
 
-func (r *repository) CreateUser(user dto.User) error {
+func (r *repository) CreateUser(user models.User) error {
 	query := "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)"
 	_, err := r.db.Exec(query, user.Username, user.Email, user.Password)
 	if err != nil {
@@ -43,8 +43,8 @@ func (r *repository) CreateUser(user dto.User) error {
 	return nil
 }
 
-func (r *repository) GetAllUsers() ([]dto.User, error) {
-	var users []dto.User
+func (r *repository) GetAllUsers() ([]models.User, error) {
+	var users []models.User
 	query := "SELECT id, username, email, updated_at, created_at FROM users"
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -53,7 +53,7 @@ func (r *repository) GetAllUsers() ([]dto.User, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var user dto.User
+		var user models.User
 		err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user: %v", err)
@@ -64,7 +64,7 @@ func (r *repository) GetAllUsers() ([]dto.User, error) {
 	return users, nil
 }
 
-func (r *repository) UpdateUser(user dto.User) error {
+func (r *repository) UpdateUser(user models.User) error {
 	query := "UPDATE users SET username = $1, email = $2 WHERE id = $3"
 	_, err := r.db.Exec(query, user.Username, user.Email, user.ID)
 	if err != nil {

@@ -3,24 +3,24 @@ package service
 import (
 	"fmt"
 
-	"github.com/Jonathan0823/auth-go/internal/dto"
+	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
 )
 
-func (s *service) GetUserByID(id int) (dto.User, error) {
+func (s *service) GetUserByID(id int) (models.User, error) {
 	return s.repo.GetUserByID(id)
 }
 
-func (s *service) GetUserByEmail(email string) (dto.User, error) {
+func (s *service) GetUserByEmail(email string) (models.User, error) {
 	return s.repo.GetUserByEmail(email)
 }
 
-func (s *service) GetAllUsers() ([]dto.User, error) {
+func (s *service) GetAllUsers() ([]models.User, error) {
 	return s.repo.GetAllUsers()
 }
 
-func (s *service) UpdateUser(user dto.User, c *gin.Context) error {
+func (s *service) UpdateUser(user models.User, c *gin.Context) error {
 	currentUser, err := utils.GetUser(c)
 	if err != nil {
 		return fmt.Errorf("User is not found")

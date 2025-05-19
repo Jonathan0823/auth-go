@@ -1,21 +1,22 @@
 package service
 
 import (
-	"github.com/Jonathan0823/auth-go/internal/dto"
+	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/internal/repository"
 	"github.com/gin-gonic/gin"
 )
 
 type Service interface {
 	//auth service
-	Register(user dto.User) error
-	Login(user dto.User) (string, string, error)
+	Register(user models.User) error
+	Login(user models.User) (string, string, error)
+	ForgotPassword(email string) error
 
 	// user service
-	GetUserByID(id int) (dto.User, error)
-	GetUserByEmail(email string) (dto.User, error)
-	GetAllUsers() ([]dto.User, error)
-	UpdateUser(user dto.User, c *gin.Context) error
+	GetUserByID(id int) (models.User, error)
+	GetUserByEmail(email string) (models.User, error)
+	GetAllUsers() ([]models.User, error)
+	UpdateUser(user models.User, c *gin.Context) error
 	DeleteUser(id int, c *gin.Context) error
 }
 

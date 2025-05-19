@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Jonathan0823/auth-go/internal/dto"
+	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *MainHandler) Register(c *gin.Context) {
-	var user dto.User
+	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
@@ -25,7 +25,7 @@ func (h *MainHandler) Register(c *gin.Context) {
 }
 
 func (h *MainHandler) Login(c *gin.Context) {
-	var user dto.User
+	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
@@ -69,7 +69,7 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	accessToken, err := utils.GenerateJWT(dto.User{Username: claims["username"].(string), Email: claims["email"].(string)}, "access")
+	accessToken, err := utils.GenerateJWT(models.User{Username: claims["username"].(string), Email: claims["email"].(string)}, "access")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return

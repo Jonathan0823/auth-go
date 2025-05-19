@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Jonathan0823/auth-go/internal/dto"
+	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,7 +34,7 @@ func (h *MainHandler) GetAllUsers(c *gin.Context) {
 	}
 
 	if users == nil {
-		users = []dto.User{}
+		users = []models.User{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Users retrieved successfully", "users": users})
@@ -53,7 +53,7 @@ func (h *MainHandler) GetUserByEmail(c *gin.Context) {
 }
 
 func (h *MainHandler) UpdateUser(c *gin.Context) {
-	var user dto.User
+	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return

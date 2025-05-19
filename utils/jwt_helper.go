@@ -6,11 +6,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/Jonathan0823/auth-go/internal/dto"
+	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateJWT(user dto.User, jwtType string) (string, error) {
+func GenerateJWT(user models.User, jwtType string) (string, error) {
 	var secretKey []byte
 	if jwtType == "access" {
 		secretKey = []byte(os.Getenv("JWT_ACCESS_SECRET"))

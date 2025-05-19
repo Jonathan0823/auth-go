@@ -3,16 +3,16 @@ package repository
 import (
 	"database/sql"
 
-	"github.com/Jonathan0823/auth-go/internal/dto"
+	"github.com/Jonathan0823/auth-go/internal/models"
 )
 
 type Repository interface {
 	//user repo
-	GetUserByID(id int) (dto.User, error)
-	GetUserByEmail(email string) (dto.User, error)
-	CreateUser(user dto.User) error
-	GetAllUsers() ([]dto.User, error)
-	UpdateUser(user dto.User) error
+	GetUserByID(id int) (models.User, error)
+	GetUserByEmail(email string) (models.User, error)
+	CreateUser(user models.User) error
+	GetAllUsers() ([]models.User, error)
+	UpdateUser(user models.User) error
 	DeleteUser(id int) error
 }
 

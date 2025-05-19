@@ -3,12 +3,12 @@ package service
 import (
 	"fmt"
 
-	"github.com/Jonathan0823/auth-go/internal/dto"
+	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/utils"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (s *service) Register(user dto.User) error {
+func (s *service) Register(user models.User) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func (s *service) Register(user dto.User) error {
 	return nil
 }
 
-func (s *service) Login(user dto.User) (string, string, error) {
+func (s *service) Login(user models.User) (string, string, error) {
 	userFromDB, err := s.repo.GetUserByEmail(user.Email)
 	if err != nil {
 		return "", "", fmt.Errorf("User not found")
