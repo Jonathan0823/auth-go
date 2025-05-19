@@ -19,7 +19,7 @@ func (h *MainHandler) GetUserByID(c *gin.Context) {
 
 	user, err := h.svc.GetUserByID(idInt)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -29,7 +29,7 @@ func (h *MainHandler) GetUserByID(c *gin.Context) {
 func (h *MainHandler) GetAllUsers(c *gin.Context) {
 	users, err := h.svc.GetAllUsers()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get users"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
