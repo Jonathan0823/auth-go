@@ -33,6 +33,10 @@ func (h *MainHandler) GetAllUsers(c *gin.Context) {
 		return
 	}
 
+	if users == nil {
+		users = []dto.User{}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Users retrieved successfully", "users": users})
 }
 
