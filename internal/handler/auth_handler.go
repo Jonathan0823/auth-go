@@ -58,13 +58,8 @@ func (h *MainHandler) Logout(c *gin.Context) {
 
 func (h *MainHandler) Refresh(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
-	if err != nil {
+	if err != nil || refreshToken == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token not found"})
-		return
-	}
-
-	if refreshToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token is empty"})
 		return
 	}
 
