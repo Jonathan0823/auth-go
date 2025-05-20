@@ -7,8 +7,10 @@ func AutoMigrate(db *sql.DB) error {
     CREATE TABLE IF NOT EXISTS users ( 
       id SERIAL PRIMARY KEY,
       username VARCHAR(100) NOT NULL,
+      image_url VARCHAR(255),
       email VARCHAR(100) NOT NULL UNIQUE,
       password VARCHAR(100) NOT NULL,
+      is_verified BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`); err != nil {
