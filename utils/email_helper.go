@@ -1,14 +1,27 @@
 package utils
 
-import "gopkg.in/gomail.v2"
+import (
+	"fmt"
+	"os"
+
+	"gopkg.in/gomail.v2"
+)
 
 func SendEmail(to string, subject string, body string) error {
+	email := os.Getenv("EMAIL")
+	password := os.Getenv("PASSWORD")
+	if email == "" || password == "" {
+		return fmt.Errorf("Email or password not set in environment variables")
+	}
+
 	m := gomail.Message{}
 	m.SetHeader("From", "")
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body)
 
-	d := gomail.NewDialer("smtp.gmail.com", 587, "", "")
+	fmt.Printf("Sending email to %s with subject %s\n", to, subject)
+
+	d := gomail.NewDialer("smtp.gmail.com", 587, email, password)
 	return d.DialAndSend(&m)
 }
