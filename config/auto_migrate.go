@@ -22,7 +22,7 @@ func AutoMigrate(db *sql.DB) error {
       id UUID PRIMARY KEY, 
       email VARCHAR(100) NOT NULL,
       expired_at TIMESTAMP NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`); err != nil {
 		return err
 	}
