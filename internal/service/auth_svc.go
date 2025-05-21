@@ -2,9 +2,12 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/utils"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,6 +25,10 @@ func (s *service) Register(user models.User) error {
 	user.Password = string(hashedPassword)
 	if err := s.repo.CreateUser(user); err != nil {
 		return err
+	}
+
+	if err := s.CreateVerifyEmail(user.Email); err != nil {
+		return fmt.Errorf("Failed to create verification email: %v", err)
 	}
 
 	return nil
@@ -48,4 +55,67 @@ func (s *service) Login(user models.User) (string, string, error) {
 	}
 
 	return access_token, refresh_token, nil
+}
+
+func (s *service) CreateVerifyEmail(email string) error {
+	userFromDB, err := s.repo.GetUserByEmail(email)
+	if err != nil || userFromDB.Email == "" {
+		return fmt.Errorf("Internal server error")
+	}
+
+	verifyEmail := models.VerifyEmail{
+		ID:        uuid.New(),
+		Email:     email,
+		ExpiredAt: time.Now().Add(1 * time.Hour),
+	}
+
+	if err := s.repo.CreateVerifyEmail(verifyEmail); err != nil {
+		return err
+	}
+
+	if err := utils.SendEmail(email, "Verify Email", "Click here to verify your email"); err != nil {
+		return fmt.Errorf("Failed to send email: %v", err)
+	}
+
+	return nil
+}
+
+func (s *service) VerifyEmail(tokenStr string, c *gin.Context) error {
+	user, err := utils.GetUser(c)
+	if err != nil {
+		return fmt.Errorf("Failed to get user from context: %v", err)
+	}
+
+	_, err = uuid.Parse(tokenStr)
+	if err != nil {
+		return fmt.Errorf("Invalid token")
+	}
+
+	verifyEmail, err := s.repo.GetVerifyEmailByID(tokenStr)
+	if err != nil || verifyEmail.ID == uuid.Nil {
+		return fmt.Errorf("Internal server error")
+	}
+
+	if verifyEmail.Email != user.Email {
+		return fmt.Errorf("You are not authorized to verify this email")
+	}
+
+	if time.Now().After(verifyEmail.ExpiredAt) {
+		return fmt.Errorf("Token expired")
+	}
+
+	return s.repo.VerifyEmail(tokenStr)
+}
+
+func (s *service) ForgotPassword(email string) error {
+	userFromDB, err := s.repo.GetUserByEmail(email)
+	if err != nil || userFromDB.Email == "" {
+		return fmt.Errorf("Internal server error")
+	}
+
+	if err := utils.SendEmail(email, "Password Reset", "Click here to reset your password"); err != nil {
+		return fmt.Errorf("Failed to send email: %v", err)
+	}
+
+	return nil
 }

@@ -22,6 +22,11 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 		auth.POST("/login", mainHandler.Login)
 		auth.POST("/logout", mainHandler.Logout)
 		auth.POST("/refresh", mainHandler.Refresh)
+		verify := auth.Group("/verify")
+		{
+			verify.POST("/email", mainHandler.VerifyEmail)
+			verify.POST("/email/resend", mainHandler.ResendVerifyEmail)
+		}
 	}
 
 	user := api.Group("/user")

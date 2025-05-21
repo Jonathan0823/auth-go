@@ -7,6 +7,11 @@ import (
 )
 
 type Repository interface {
+	//auth repo
+	CreateVerifyEmail(verifyEmail models.VerifyEmail) error
+	GetVerifyEmailByID(id string) (models.VerifyEmail, error)
+	VerifyEmail(token string) error
+
 	//user repo
 	GetUserByID(id int) (models.User, error)
 	GetUserByEmail(email string) (models.User, error)

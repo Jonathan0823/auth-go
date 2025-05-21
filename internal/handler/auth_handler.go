@@ -83,3 +83,30 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 	c.SetCookie("access_token", accessToken, 15*60, "/", domain, false, false)
 	c.JSON(http.StatusOK, gin.H{"message": "Access token refreshed successfully"})
 }
+
+func (h *MainHandler) VerifyEmail(c *gin.Context) {
+	tokenStr := c.Query("token")
+
+	if err := h.svc.VerifyEmail(tokenStr, c); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
+
+}
+
+func (h *MainHandler) ResendVerifyEmail(c *gin.Context) {
+	email := c.Query("email")
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
+		return
+	}
+
+	if err := h.svc.CreateVerifyEmail(email); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Verification email resent successfully"})
+}
