@@ -14,8 +14,8 @@ func SendEmail(to string, subject string, body string) error {
 		return fmt.Errorf("Email or password not set in environment variables")
 	}
 
-	m := gomail.Message{}
-	m.SetHeader("From", "")
+	m := gomail.NewMessage()
+	m.SetHeader("From", email)
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body)
@@ -23,5 +23,5 @@ func SendEmail(to string, subject string, body string) error {
 	fmt.Printf("Sending email to %s with subject %s\n", to, subject)
 
 	d := gomail.NewDialer("smtp.gmail.com", 587, email, password)
-	return d.DialAndSend(&m)
+	return d.DialAndSend(m)
 }
