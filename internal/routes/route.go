@@ -25,7 +25,7 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 		auth.POST("/forgot-password", mainHandler.ForgotPassword)
 		verify := auth.Group("/verify")
 		{
-			verify.POST("/email", mainHandler.VerifyEmail)
+			verify.GET("/email", mainHandler.VerifyEmail)
 			verify.POST("/email/resend", mainHandler.ResendVerifyEmail)
 		}
 	}
