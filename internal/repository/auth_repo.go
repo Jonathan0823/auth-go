@@ -47,3 +47,11 @@ func (r *repository) GetForgotPasswordByID(id string) (models.ForgotPassword, er
 	}
 	return data, nil
 }
+
+func (r *repository) DeleteForgotPasswordByID(id string) error {
+	_, err := r.db.Exec("DELETE FROM forgot_password_emails WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
