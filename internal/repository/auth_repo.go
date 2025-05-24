@@ -30,3 +30,20 @@ func (r *repository) VerifyEmail(token string) error {
 
 	return nil
 }
+
+func (r *repository) CreateForgotPasswordEmail(data models.ForgotPassword) error {
+	_, err := r.db.Exec("INSERT INTO forgot_password_emails (id, email, expired_at) VALUES ($1, $2, $3)", data.ID, data.Email, data.ExpiredAt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repository) GetForgotPasswordByID(id string) (models.ForgotPassword, error) {
+	var data models.ForgotPassword
+	err := r.db.QueryRow("SELECT id, email, expired_at FROM forgot_password_emails WHERE id = $1", id).Scan(&data.ID, &data.Email, &data.ExpiredAt)
+	if err != nil {
+		return models.ForgotPassword{}, err
+	}
+	return data, nil
+}

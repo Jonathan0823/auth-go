@@ -11,6 +11,8 @@ type Repository interface {
 	CreateVerifyEmail(verifyEmail models.VerifyEmail) error
 	GetVerifyEmailByID(id string) (models.VerifyEmail, error)
 	VerifyEmail(token string) error
+	CreateForgotPasswordEmail(data models.ForgotPassword) error
+	GetForgotPasswordByID(id string) (models.ForgotPassword, error)
 
 	//user repo
 	GetUserByID(id int) (models.User, error)
