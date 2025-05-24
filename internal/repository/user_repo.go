@@ -23,8 +23,8 @@ func (r *repository) GetUserByID(id int) (models.User, error) {
 
 func (r *repository) GetUserByEmail(email string) (models.User, error) {
 	var user models.User
-	query := "SELECT id, username, email, password, updated_at, created_at FROM users WHERE email = $1"
-	err := r.db.QueryRow(query, email).Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.UpdatedAt, &user.CreatedAt)
+	query := "SELECT id, username, email, updated_at, created_at FROM users WHERE email = $1"
+	err := r.db.QueryRow(query, email).Scan(&user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, fmt.Errorf("user with email %s is not found", email)
