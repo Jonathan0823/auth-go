@@ -20,6 +20,7 @@ func AutoMigrate(db *sql.DB) error {
 	if _, err := db.Exec(`
     CREATE TABLE IF NOT EXISTS verify_emails ( 
       id UUID PRIMARY KEY, 
+      user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       email VARCHAR(100) NOT NULL,
       expired_at TIMESTAMP NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -30,6 +31,7 @@ func AutoMigrate(db *sql.DB) error {
 	if _, err := db.Exec(`
     CREATE TABLE IF NOT EXISTS forgot_password_emails ( 
       id UUID PRIMARY KEY, 
+      user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       email VARCHAR(100) NOT NULL,
       expired_at TIMESTAMP NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

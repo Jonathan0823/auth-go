@@ -8,6 +8,7 @@ import (
 
 type VerifyEmail struct {
 	ID        uuid.UUID `json:"id"`
+	UserID    int       `json:"user_id"`
 	Email     string    `json:"email" binding:"required,email"`
 	ExpiredAt time.Time `json:"expired_at"`
 	CreatedAt time.Time `json:"created_at"`
@@ -15,6 +16,7 @@ type VerifyEmail struct {
 
 type ForgotPassword struct {
 	ID        uuid.UUID `json:"id"`
+	UserID    int       `json:"user_id"`
 	Email     string    `json:"email" binding:"required,email"`
 	ExpiredAt time.Time `json:"expired_at"`
 	CreatedAt time.Time `json:"created_at"`
