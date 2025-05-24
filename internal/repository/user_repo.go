@@ -81,3 +81,12 @@ func (r *repository) DeleteUser(id int) error {
 	}
 	return nil
 }
+
+func (r *repository) UpdateUserPassword(id int, newPassword string) error {
+	query := "UPDATE users SET password = $1 WHERE id = $2"
+	_, err := r.db.Exec(query, newPassword, id)
+	if err != nil {
+		return fmt.Errorf("failed to update user password: %v", err)
+	}
+	return nil
+}

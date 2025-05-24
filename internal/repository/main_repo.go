@@ -21,6 +21,7 @@ type Repository interface {
 	GetAllUsers() ([]models.User, error)
 	UpdateUser(user models.User) error
 	DeleteUser(id int) error
+	UpdateUserPassword(id int, newPassword string) error
 }
 
 type repository struct {
