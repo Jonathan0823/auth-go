@@ -65,6 +65,7 @@ func (s *service) CreateVerifyEmail(email string) error {
 
 	verifyEmail := models.VerifyEmail{
 		ID:        uuid.New(),
+		UserID:    userFromDB.ID,
 		Email:     email,
 		ExpiredAt: time.Now().Add(1 * time.Hour),
 	}
