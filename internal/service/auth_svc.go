@@ -114,6 +114,17 @@ func (s *service) ForgotPassword(email string) error {
 		return fmt.Errorf("Internal server error")
 	}
 
+	data := models.ForgotPassword{
+		ID:        uuid.New(),
+		UserID:    userFromDB.ID,
+		Email:     email,
+		ExpiredAt: time.Now().Add(15 * time.Minute),
+	}
+
+	if err := s.repo.CreateForgotPasswordEmail(data); err != nil {
+		return fmt.Errorf("Failed to create forgot password email: %v", err)
+	}
+
 	if err := utils.SendEmail(email, "Password Reset", "Click here to reset your password"); err != nil {
 		return fmt.Errorf("Failed to send email: %v", err)
 	}
