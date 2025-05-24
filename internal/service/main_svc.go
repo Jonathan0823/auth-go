@@ -13,6 +13,7 @@ type Service interface {
 	ForgotPassword(email string) error
 	CreateVerifyEmail(email string) error
 	VerifyEmail(tokenStr string, c *gin.Context) error
+	ResetPassword(tokenStr string, newPassword string) error
 
 	// user service
 	GetUserByID(id int) (models.User, error)

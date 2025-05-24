@@ -131,3 +131,29 @@ func (s *service) ForgotPassword(email string) error {
 
 	return nil
 }
+
+func (s *service) ResetPassword(tokenStr string, newPassword string) error {
+	if _, err := uuid.Parse(tokenStr); err != nil {
+		return fmt.Errorf("Invalid token")
+	}
+
+	forgotPassword, err := s.repo.GetForgotPasswordByID(tokenStr)
+	if err != nil || forgotPassword.ID == uuid.Nil {
+		return fmt.Errorf("Internal server error")
+	}
+
+	if time.Now().After(forgotPassword.ExpiredAt) {
+		return fmt.Errorf("Token expired")
+	}
+
+	hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("Failed to hash new password")
+	}
+
+	if err = s.repo.UpdateUserPassword(forgotPassword.UserID, string(hashedNewPassword)); err != nil {
+		return fmt.Errorf("Failed to update password: %v", err)
+	}
+
+	return s.repo.DeleteForgotPasswordByID(tokenStr)
+}
