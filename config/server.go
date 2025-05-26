@@ -28,7 +28,7 @@ func (config *Config) InitServer(r *gin.Engine) {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{config.AllowedOrigins},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
