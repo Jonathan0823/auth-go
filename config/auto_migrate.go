@@ -6,11 +6,13 @@ func AutoMigrate(db *sql.DB) error {
 	if _, err := db.Exec(`
     CREATE TABLE IF NOT EXISTS users ( 
       id SERIAL PRIMARY KEY,
+      oauth_id VARCHAR(100) UNIQUE,
       username VARCHAR(100) NOT NULL,
-      image_url VARCHAR(255),
+      avatar_url VARCHAR(255),
       email VARCHAR(100) NOT NULL UNIQUE,
       password VARCHAR(100) NOT NULL,
       is_verified BOOLEAN DEFAULT FALSE,
+      provider VARCHAR(50) DEFAULT 'local',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`); err != nil {
