@@ -16,6 +16,8 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	config.InitOAuth()
+
 	db := config.InitDB()
 	defer db.Close()
 
