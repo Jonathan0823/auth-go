@@ -5,6 +5,7 @@ import (
 
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/markbates/goth/gothic"
 )
 
 func AuthMiddleware(c *gin.Context) {
@@ -21,6 +22,19 @@ func AuthMiddleware(c *gin.Context) {
 	}
 
 	c.Set("user", user)
+
+	c.Next()
+}
+
+func OAuthMiddleware(c *gin.Context) {
+	provider := c.Param("provider")
+	if provider == "" {
+		provider = "github"
+	}
+
+	gothic.GetProviderName = func(req *http.Request) (string, error) {
+		return provider, nil
+	}
 
 	c.Next()
 }
