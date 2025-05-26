@@ -18,6 +18,12 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 	api := r.Group("/api")
 	auth := api.Group("/auth")
 	{
+		provider := auth.Group("/:provider")
+		provider.Use(middleware.OAuthMiddleware)
+		{
+			provider.GET("/", mainHandler.OAuthLogin)
+			provider.GET("/callback", mainHandler.OAuthCallback)
+		}
 		auth.POST("/register", mainHandler.Register)
 		auth.POST("/login", mainHandler.Login)
 		auth.POST("/logout", mainHandler.Logout)
