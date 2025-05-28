@@ -42,7 +42,7 @@ func (h *MainHandler) Login(c *gin.Context) {
 		domain = "localhost"
 	}
 
-	c.SetCookie("access_token", access_token, 15*60, "/", domain, false, false)
+	c.SetCookie("access_token", access_token, 7*24*3600, "/", domain, false, false)
 
 	c.SetCookie("refresh_token", refresh_token, 7*24*3600, "/", domain, false, true)
 
@@ -80,7 +80,7 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 		domain = "localhost"
 	}
 
-	c.SetCookie("access_token", accessToken, 15*60, "/", domain, false, false)
+	c.SetCookie("access_token", accessToken, 7*24*3600, "/", domain, false, false)
 	c.JSON(http.StatusOK, gin.H{"message": "Access token refreshed successfully"})
 }
 
