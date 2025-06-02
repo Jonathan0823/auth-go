@@ -46,7 +46,7 @@ func (h *MainHandler) Login(c *gin.Context) {
 
 	c.SetCookie("refresh_token", refresh_token, 7*24*3600, "/", domain, false, true)
 
-	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully", "token": gin.H{"access_token": access_token, "refresh_token": refresh_token}})
+	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully"})
 }
 
 func (h *MainHandler) Logout(c *gin.Context) {
