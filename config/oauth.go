@@ -8,6 +8,7 @@ import (
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/github"
+	"github.com/markbates/goth/providers/google"
 )
 
 func InitOAuth() {
@@ -28,6 +29,11 @@ func InitOAuth() {
 			os.Getenv("GITHUB_CLIENT_SECRET"),
 			baseURL+"/api/auth/github/callback",
 			"email", "profile",
+		),
+		google.New(
+			os.Getenv("GOOGLE_CLIENT_ID"),
+			os.Getenv("GOOGLE_CLIENT_SECRET"),
+			baseURL+"/api/auth/google/callback",
 		),
 	)
 
