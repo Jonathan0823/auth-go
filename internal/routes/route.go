@@ -1,20 +1,12 @@
 package routes
 
 import (
-	"database/sql"
-
 	"github.com/Jonathan0823/auth-go/internal/handler"
 	"github.com/Jonathan0823/auth-go/internal/middleware"
-	"github.com/Jonathan0823/auth-go/internal/repository"
-	"github.com/Jonathan0823/auth-go/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, db *sql.DB) {
-	repo := repository.NewRepository(db)
-	svc := service.NewService(repo)
-	mainHandler := handler.NewMainHandler(svc)
-
+func RegisterRoutes(r *gin.Engine, mainHandler *handler.MainHandler) {
 	api := r.Group("/api")
 	auth := api.Group("/auth")
 	{

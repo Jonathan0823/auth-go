@@ -5,7 +5,10 @@ import (
 	"log"
 
 	"github.com/Jonathan0823/auth-go/config"
+	"github.com/Jonathan0823/auth-go/internal/handler"
+	"github.com/Jonathan0823/auth-go/internal/repository"
 	"github.com/Jonathan0823/auth-go/internal/routes"
+	"github.com/Jonathan0823/auth-go/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -23,8 +26,11 @@ func main() {
 
 	r := gin.New()
 	r.Use(gin.Logger())
+	repo := repository.NewRepository(db)
+	svc := service.NewService(repo)
+	mainHandler := handler.NewMainHandler(svc)
 
-	routes.RegisterRoutes(r, db)
+	routes.RegisterRoutes(r, mainHandler)
 
 	config.NewServer().InitServer(r)
 
