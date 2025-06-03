@@ -28,7 +28,7 @@ func InitOAuth() {
 			os.Getenv("GITHUB_CLIENT_ID"),
 			os.Getenv("GITHUB_CLIENT_SECRET"),
 			baseURL+"/api/auth/github/callback",
-			"email", "profile",
+			"user:email",
 		),
 		google.New(
 			os.Getenv("GOOGLE_CLIENT_ID"),
