@@ -20,10 +20,12 @@ func (h *MainHandler) OAuthCallback(c *gin.Context) {
 	}
 
 	data := models.User{
-		OAuthID:  user.UserID,
-		Email:    user.Email,
-		Username: user.NickName,
-		Provider: user.Provider,
+		OAuthID:   user.UserID,
+		Email:     user.Email,
+		Username:  user.NickName,
+		Provider:  user.Provider,
+		AvatarURL: user.AvatarURL,
+	}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
