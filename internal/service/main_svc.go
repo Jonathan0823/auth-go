@@ -15,6 +15,9 @@ type Service interface {
 	VerifyEmail(tokenStr string, c *gin.Context) error
 	ResetPassword(tokenStr string, newPassword string) error
 
+	//oauth service
+	OAuthLogin(user models.User) (*models.User, error)
+
 	// user service
 	GetUserByID(id int) (models.User, error)
 	GetUserByEmail(email string) (models.User, error)
