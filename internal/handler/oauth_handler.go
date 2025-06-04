@@ -26,10 +26,15 @@ func (h *MainHandler) OAuthCallback(c *gin.Context) {
 		Provider:  user.Provider,
 		AvatarURL: user.AvatarURL,
 	}
+
+	userData, err := h.svc.OAuthLogin(data)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User logged in successfully",
-		"user":    data,
+		"user":    userData,
 	})
 }
