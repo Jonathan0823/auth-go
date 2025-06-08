@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/Jonathan0823/auth-go/internal/models"
+	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -81,4 +82,19 @@ func (h *MainHandler) DeleteUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
+}
+
+func (h *MainHandler) GetCurrentUser(c *gin.Context) {
+	user, err := utils.GetUser(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve current user"})
+		return
+	}
+
+	data, err := h.svc.GetUserByID(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Current user retrieved successfully", "user": data})
 }

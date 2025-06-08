@@ -32,6 +32,7 @@ func RegisterRoutes(r *gin.Engine, mainHandler *handler.MainHandler) {
 	user := api.Group("/user")
 	user.Use(middleware.AuthMiddleware)
 	{
+		user.GET("/me", mainHandler.GetCurrentUser)
 		user.GET("/:id", mainHandler.GetUserByID)
 		user.GET("/get-all", mainHandler.GetAllUsers)
 		user.GET("/email", mainHandler.GetUserByEmail)
