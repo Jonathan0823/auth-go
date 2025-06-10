@@ -127,7 +127,7 @@ func (h *MainHandler) ForgotPassword(c *gin.Context) {
 
 func (h *MainHandler) ResetPassword(c *gin.Context) {
 	type ResetPasswordRequest struct {
-		Token    string `json:"token" binding:"required"`
+		ID       string `json:"id" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 	var req ResetPasswordRequest
@@ -136,7 +136,7 @@ func (h *MainHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.ResetPassword(req.Token, req.Password); err != nil {
+	if err := h.svc.ResetPassword(req.ID, req.Password); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 

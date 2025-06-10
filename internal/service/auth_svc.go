@@ -132,12 +132,12 @@ func (s *service) ForgotPassword(email string) error {
 	return nil
 }
 
-func (s *service) ResetPassword(tokenStr string, newPassword string) error {
-	if _, err := uuid.Parse(tokenStr); err != nil {
+func (s *service) ResetPassword(id string, newPassword string) error {
+	if _, err := uuid.Parse(id); err != nil {
 		return fmt.Errorf("Invalid token")
 	}
 
-	forgotPassword, err := s.repo.GetForgotPasswordByID(tokenStr)
+	forgotPassword, err := s.repo.GetForgotPasswordByID(id)
 	if err != nil || forgotPassword.ID == uuid.Nil {
 		return fmt.Errorf("Internal server error")
 	}
@@ -155,5 +155,5 @@ func (s *service) ResetPassword(tokenStr string, newPassword string) error {
 		return fmt.Errorf("Failed to update password: %v", err)
 	}
 
-	return s.repo.DeleteForgotPasswordByID(tokenStr)
+	return s.repo.DeleteForgotPasswordByID(id)
 }
