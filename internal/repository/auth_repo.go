@@ -19,12 +19,12 @@ func (r *repository) GetVerifyEmailByID(id string) (models.VerifyEmail, error) {
 	return verifyEmail, nil
 }
 
-func (r *repository) VerifyEmail(token string) error {
-	if _, err := r.db.Exec("UPDATE users SET is_verified = true WHERE email = (SELECT email FROM verify_emails WHERE id = $1)", token); err != nil {
+func (r *repository) VerifyEmail(id string) error {
+	if _, err := r.db.Exec("UPDATE users SET is_verified = true WHERE email = (SELECT email FROM verify_emails WHERE id = $1)", id); err != nil {
 		return err
 	}
 
-	if _, err := r.db.Exec("DELETE FROM verify_emails WHERE id = $1", token); err != nil {
+	if _, err := r.db.Exec("DELETE FROM verify_emails WHERE id = $1", id); err != nil {
 		return err
 	}
 

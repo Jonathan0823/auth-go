@@ -85,9 +85,9 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 }
 
 func (h *MainHandler) VerifyEmail(c *gin.Context) {
-	tokenStr := c.Query("token")
+	id := c.Query("id")
 
-	if err := h.svc.VerifyEmail(tokenStr, c); err != nil {
+	if err := h.svc.VerifyEmail(id, c); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

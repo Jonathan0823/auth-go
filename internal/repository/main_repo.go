@@ -10,7 +10,7 @@ type Repository interface {
 	//auth repo
 	CreateVerifyEmail(verifyEmail models.VerifyEmail) error
 	GetVerifyEmailByID(id string) (models.VerifyEmail, error)
-	VerifyEmail(token string) error
+	VerifyEmail(id string) error
 	CreateForgotPasswordEmail(data models.ForgotPassword) error
 	GetForgotPasswordByID(id string) (models.ForgotPassword, error)
 	DeleteForgotPasswordByID(id string) error

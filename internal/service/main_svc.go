@@ -12,7 +12,7 @@ type Service interface {
 	Login(user models.User) (string, string, error)
 	ForgotPassword(email string) error
 	CreateVerifyEmail(email string) error
-	VerifyEmail(tokenStr string, c *gin.Context) error
+	VerifyEmail(id string, c *gin.Context) error
 	ResetPassword(tokenStr string, newPassword string) error
 
 	//oauth service
