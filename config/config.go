@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Jonathan0823/auth-go/utils"
 	_ "github.com/lib/pq"
 )
 
@@ -38,7 +39,7 @@ func InitDB() *sql.DB {
 		log.Fatal("Error connecting to the database:", err)
 	}
 
-	if err = AutoMigrate(db); err != nil {
+	if err = utils.AutoMigrate(db); err != nil {
 		log.Fatal("Error migrating the database:", err)
 	}
 
