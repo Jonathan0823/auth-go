@@ -12,16 +12,18 @@ import (
 
 func GenerateJWT(user models.User, jwtType string) (string, error) {
 	var secretKey []byte
-	if jwtType == "access" {
+	switch jwtType {
+	case "access":
 		secretKey = []byte(os.Getenv("JWT_ACCESS_SECRET"))
-	} else if jwtType == "refresh" {
+	case "refresh":
 		secretKey = []byte(os.Getenv("JWT_REFRESH_SECRET"))
 	}
 
 	var expirationTime time.Time
-	if jwtType == "access" {
+	switch jwtType {
+	case "access":
 		expirationTime = time.Now().Add(time.Minute * 15)
-	} else if jwtType == "refresh" {
+	case "refresh":
 		expirationTime = time.Now().Add(time.Hour * 24 * 7)
 	}
 
@@ -47,9 +49,10 @@ func GenerateJWT(user models.User, jwtType string) (string, error) {
 
 func ValidateJWT(tokenString string, jwtType string) (jwt.MapClaims, error) {
 	var secretKey []byte
-	if jwtType == "access" {
+	switch jwtType {
+	case "access":
 		secretKey = []byte(os.Getenv("JWT_ACCESS_SECRET"))
-	} else if jwtType == "refresh" {
+	case "refresh":
 		secretKey = []byte(os.Getenv("JWT_REFRESH_SECRET"))
 	}
 
