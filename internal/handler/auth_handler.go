@@ -109,9 +109,11 @@ func (h *MainHandler) ResendVerifyEmail(c *gin.Context) {
 }
 
 func (h *MainHandler) ForgotPassword(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+	type Request struct {
+		Email string `json:"email" validate:"required,email"`
+	}
+	var user Request
+	if isValid := utils.BindJSONWithValidation(c, &user); !isValid {
 		return
 	}
 
@@ -124,13 +126,8 @@ func (h *MainHandler) ForgotPassword(c *gin.Context) {
 }
 
 func (h *MainHandler) ResetPassword(c *gin.Context) {
-	type ResetPasswordRequest struct {
-		ID       string `json:"id" binding:"required"`
-		Password string `json:"password" binding:"required"`
-	}
-	var req ResetPasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+	var req models.ResetPasswordRequest
+	if isValid := utils.BindJSONWithValidation(c, &req); !isValid {
 		return
 	}
 
