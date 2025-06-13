@@ -54,13 +54,7 @@ func (h *MainHandler) GetUserByEmail(c *gin.Context) {
 
 func (h *MainHandler) UpdateUser(c *gin.Context) {
 	var user models.UpdateUserRequest
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
-
-	if validationErrors := utils.ValidateStruct(&user); validationErrors != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": validationErrors})
+	if isValid := utils.BindJSONWithValidation(c, &user); !isValid {
 		return
 	}
 

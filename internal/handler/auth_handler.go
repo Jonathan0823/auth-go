@@ -11,13 +11,7 @@ import (
 
 func (h *MainHandler) Register(c *gin.Context) {
 	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
-
-	if validationErrors := utils.ValidateStruct(&user); validationErrors != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": validationErrors})
+	if isValid := utils.BindJSONWithValidation(c, &user); !isValid {
 		return
 	}
 
@@ -31,13 +25,7 @@ func (h *MainHandler) Register(c *gin.Context) {
 
 func (h *MainHandler) Login(c *gin.Context) {
 	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
-
-	if validationErrors := utils.ValidateStruct(&user); validationErrors != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": validationErrors})
+	if isValid := utils.BindJSONWithValidation(c, &user); !isValid {
 		return
 	}
 
