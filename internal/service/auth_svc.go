@@ -19,11 +19,8 @@ func (s *service) Register(user models.User) error {
 	}
 
 	userFromDB, err := s.repo.GetUserByEmail(user.Email)
-	if userFromDB.Email != "" {
+	if userFromDB.Email != "" && err == nil {
 		return fmt.Errorf("user with this email already exists")
-	}
-	if err != nil && userFromDB.Email == "" {
-		return fmt.Errorf("internal server error")
 	}
 
 	user.Password = string(hashedPassword)
@@ -43,8 +40,12 @@ func (s *service) Login(user models.User) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("user not found")
 	}
+	userPassword, err := s.repo.GetPasswordByEmail(user.Email)
+	if err != nil || userPassword == "" {
+		return "", "", fmt.Errorf("internal server error")
+	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(user.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(userPassword), []byte(user.Password)); err != nil {
 		return "", "", fmt.Errorf("invalid password")
 	}
 

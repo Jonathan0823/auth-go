@@ -7,7 +7,7 @@ import (
 )
 
 type Repository interface {
-	//auth repo
+	// auth repo
 	CreateVerifyEmail(verifyEmail models.VerifyEmail) error
 	GetVerifyEmailByID(id string) (models.VerifyEmail, error)
 	VerifyEmail(id string) error
@@ -15,7 +15,7 @@ type Repository interface {
 	GetForgotPasswordByID(id string) (models.ForgotPassword, error)
 	DeleteForgotPasswordByID(id string) error
 
-	//user repo
+	// user repo
 	GetUserByID(id int) (models.User, error)
 	GetUserByEmail(email string) (models.User, error)
 	CreateUser(user models.User) error
@@ -23,6 +23,7 @@ type Repository interface {
 	UpdateUser(user models.User) error
 	DeleteUser(id int) error
 	UpdateUserPassword(id int, newPassword string) error
+	GetPasswordByEmail(email string) (string, error)
 }
 
 type repository struct {

@@ -90,3 +90,16 @@ func (r *repository) UpdateUserPassword(id int, newPassword string) error {
 	}
 	return nil
 }
+
+func (r *repository) GetPasswordByEmail(email string) (string, error) {
+	var password string
+	query := "SELECT password FROM users WHERE email = $1"
+	err := r.db.QueryRow(query, email).Scan(&password)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("user with email %s is not found", email)
+		}
+		return "", fmt.Errorf("failed to get password: %v", err)
+	}
+	return password, nil
+}
