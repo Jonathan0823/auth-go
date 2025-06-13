@@ -11,7 +11,7 @@ func SendEmail(to string, subject string, body string) error {
 	email := os.Getenv("EMAIL")
 	password := os.Getenv("PASSWORD")
 	if email == "" || password == "" {
-		return fmt.Errorf("Email or password not set in environment variables")
+		return fmt.Errorf("email or password not set in environment variables")
 	}
 
 	m := gomail.NewMessage()

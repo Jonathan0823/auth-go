@@ -11,12 +11,12 @@ import (
 func GetUser(c *gin.Context) (models.User, error) {
 	claims, exists := c.Get("user")
 	if !exists {
-		return models.User{}, fmt.Errorf("User is not found")
+		return models.User{}, fmt.Errorf("user is not found")
 	}
 
 	mapClaims, ok := claims.(jwt.MapClaims)
 	if !ok {
-		return models.User{}, fmt.Errorf("Invalid token claims")
+		return models.User{}, fmt.Errorf("invalid token claims")
 	}
 
 	return models.User{
