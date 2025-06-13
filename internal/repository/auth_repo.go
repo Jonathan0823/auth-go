@@ -3,7 +3,7 @@ package repository
 import "github.com/Jonathan0823/auth-go/internal/models"
 
 func (r *repository) CreateVerifyEmail(verifyEmail models.VerifyEmail) error {
-	_, err := r.db.Exec("INSERT INTO verify_emails (id, email, expired_at) VALUES ($1, $2, $3)", verifyEmail.ID, verifyEmail.Email, verifyEmail.ExpiredAt)
+	_, err := r.db.Exec("INSERT INTO verify_emails (id, user_id, email, expired_at) VALUES ($1, $2, $3, $4)", verifyEmail.ID, verifyEmail.UserID, verifyEmail.Email, verifyEmail.ExpiredAt)
 	if err != nil {
 		return err
 	}
