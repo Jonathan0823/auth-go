@@ -2,8 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -67,4 +69,17 @@ func splitJSONTag(tag string) string {
 		}
 	}
 	return tag
+}
+
+func BindJSONWithValidation(c *gin.Context, obj any) bool {
+	if err := c.ShouldBindJSON(obj); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return false
+	}
+
+	if validationErrors := ValidateStruct(obj); len(validationErrors) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationErrors})
+		return false
+	}
+	return true
 }
