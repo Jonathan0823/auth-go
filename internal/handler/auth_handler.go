@@ -16,6 +16,11 @@ func (h *MainHandler) Register(c *gin.Context) {
 		return
 	}
 
+	if validationErrors := utils.ValidateStruct(&user); validationErrors != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationErrors})
+		return
+	}
+
 	if err := h.svc.Register(user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -28,6 +33,11 @@ func (h *MainHandler) Login(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	if validationErrors := utils.ValidateStruct(&user); validationErrors != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationErrors})
 		return
 	}
 
@@ -93,7 +103,6 @@ func (h *MainHandler) VerifyEmail(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
-
 }
 
 func (h *MainHandler) ResendVerifyEmail(c *gin.Context) {
@@ -110,6 +119,7 @@ func (h *MainHandler) ResendVerifyEmail(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Verification email resent successfully"})
 }
+
 func (h *MainHandler) ForgotPassword(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
