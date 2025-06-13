@@ -12,3 +12,10 @@ type User struct {
 	CreatedAt  string `json:"created_at"`
 	UpdatedAt  string `json:"updated_at"`
 }
+
+type UpdateUserRequest struct {
+	ID        int    `json:"id" validate:"required"`
+	Username  string `json:"username" validate:"required,min=3,max=30,alphanum"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+	Email     string `json:"email" validate:"required,email"`
+}
