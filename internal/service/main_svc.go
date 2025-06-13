@@ -7,7 +7,7 @@ import (
 )
 
 type Service interface {
-	//auth service
+	// auth service
 	Register(user models.User) error
 	Login(user models.User) (string, string, error)
 	ForgotPassword(email string) error
@@ -15,14 +15,14 @@ type Service interface {
 	VerifyEmail(id string, c *gin.Context) error
 	ResetPassword(tokenStr string, newPassword string) error
 
-	//oauth service
+	// oauth service
 	OAuthLogin(user models.User) (*models.User, error)
 
 	// user service
 	GetUserByID(id int) (models.User, error)
 	GetUserByEmail(email string) (models.User, error)
 	GetAllUsers() ([]models.User, error)
-	UpdateUser(user models.User, c *gin.Context) error
+	UpdateUser(user models.UpdateUserRequest, c *gin.Context) error
 	DeleteUser(id int, c *gin.Context) error
 }
 

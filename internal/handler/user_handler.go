@@ -12,7 +12,6 @@ import (
 func (h *MainHandler) GetUserByID(c *gin.Context) {
 	id := c.Param("id")
 	idInt, err := strconv.Atoi(id)
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
@@ -54,9 +53,14 @@ func (h *MainHandler) GetUserByEmail(c *gin.Context) {
 }
 
 func (h *MainHandler) UpdateUser(c *gin.Context) {
-	var user models.User
+	var user models.UpdateUserRequest
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	if validationErrors := utils.ValidateStruct(&user); validationErrors != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationErrors})
 		return
 	}
 

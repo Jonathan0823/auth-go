@@ -20,14 +20,14 @@ func (s *service) GetAllUsers() ([]models.User, error) {
 	return s.repo.GetAllUsers()
 }
 
-func (s *service) UpdateUser(user models.User, c *gin.Context) error {
+func (s *service) UpdateUser(user models.UpdateUserRequest, c *gin.Context) error {
 	currentUser, err := utils.GetUser(c)
 	if err != nil {
-		return fmt.Errorf("User is not found")
+		return fmt.Errorf("user is not found")
 	}
 
 	if currentUser.ID != user.ID {
-		return fmt.Errorf("You are not authorized to update this user")
+		return fmt.Errorf("you are not authorized to update this user")
 	}
 
 	return s.repo.UpdateUser(user)
@@ -36,11 +36,11 @@ func (s *service) UpdateUser(user models.User, c *gin.Context) error {
 func (s *service) DeleteUser(id int, c *gin.Context) error {
 	currentUser, err := utils.GetUser(c)
 	if err != nil {
-		return fmt.Errorf("User is not found")
+		return fmt.Errorf("user is not found")
 	}
 
 	if currentUser.ID != id {
-		return fmt.Errorf("You are not authorized to update this user")
+		return fmt.Errorf("you are not authorized to update this user")
 	}
 
 	return s.repo.DeleteUser(id)
