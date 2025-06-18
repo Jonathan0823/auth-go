@@ -1,3 +1,4 @@
+// Package service provides business logic for user authentication and management
 package service
 
 import (
@@ -49,17 +50,17 @@ func (s *service) Login(user models.User) (string, string, error) {
 		return "", "", fmt.Errorf("invalid password")
 	}
 
-	access_token, err := utils.GenerateJWT(userFromDB, "access")
+	accessToken, err := utils.GenerateJWT(userFromDB, "access")
 	if err != nil {
 		return "", "", err
 	}
 
-	refresh_token, err := utils.GenerateJWT(userFromDB, "refresh")
+	refreshToken, err := utils.GenerateJWT(userFromDB, "refresh")
 	if err != nil {
 		return "", "", err
 	}
 
-	return access_token, refresh_token, nil
+	return accessToken, refreshToken, nil
 }
 
 func (s *service) CreateVerifyEmail(email string) error {

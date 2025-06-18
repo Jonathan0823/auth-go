@@ -1,3 +1,4 @@
+// Package middleware provides middleware functions for authentication and OAuth handling in a Gin web application.
 package middleware
 
 import (

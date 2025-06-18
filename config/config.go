@@ -1,3 +1,4 @@
+// Package config provides configuration and database initialization for the application
 package config
 
 import (

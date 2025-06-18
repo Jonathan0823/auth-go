@@ -1,3 +1,4 @@
+// Package routes provides route registration for the application
 package routes
 
 import (
@@ -39,5 +40,4 @@ func RegisterRoutes(r *gin.Engine, mainHandler *handler.MainHandler) {
 		user.PATCH("/update", mainHandler.UpdateUser)
 		user.DELETE("/delete/:id", mainHandler.DeleteUser)
 	}
-
 }
