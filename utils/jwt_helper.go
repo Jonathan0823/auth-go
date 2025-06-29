@@ -9,6 +9,7 @@ import (
 
 	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 func GenerateJWT(user models.User, jwtType string) (string, error) {
@@ -36,6 +37,7 @@ func GenerateJWT(user models.User, jwtType string) (string, error) {
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["id"] = user.ID
+	claims["jti"] = uuid.New().String()
 	claims["username"] = user.Username
 	claims["email"] = user.Email
 	claims["exp"] = expirationTime.Unix()
