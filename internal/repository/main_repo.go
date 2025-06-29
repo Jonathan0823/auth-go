@@ -14,6 +14,9 @@ type Repository interface {
 	CreateForgotPasswordEmail(data models.ForgotPassword) error
 	GetForgotPasswordByID(id string) (models.ForgotPassword, error)
 	DeleteForgotPasswordByID(id string) error
+	CreateTokenLog(tokenLog models.TokenLog) error
+	GetTokenLogByJTI(jti string) (models.TokenLog, error)
+	InvalidateTokenLog(jti string) error
 
 	// user repo
 	GetUserByID(id int) (models.User, error)
