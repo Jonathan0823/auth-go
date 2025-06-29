@@ -48,7 +48,7 @@ func AutoMigrate(db *sql.DB) error {
 			jti VARCHAR(100) NOT NULL UNIQUE,
 		  refreshed_from_jti VARCHAR(100),
 		  invalidated_at TIMESTAMP,
-			expires_at TIMESTAMP NOT NULL,
+			expired_at TIMESTAMP NOT NULL,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 			ip_address VARCHAR(45) NOT NULL,
 			user_agent TEXT NOT NULL
