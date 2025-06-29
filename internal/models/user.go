@@ -9,6 +9,8 @@ type User struct {
 	Password   string `json:"password,omitempty" validate:"required_without=OAuthID,min=8,max=100"`
 	IsVerified bool   `json:"is_verified"`
 	Provider   string `json:"provider,omitempty"`
+	IPAddress  string `json:"ip_address,omitempty"`
+	UserAgent  string `json:"user_agent,omitempty"`
 	CreatedAt  string `json:"created_at"`
 	UpdatedAt  string `json:"updated_at"`
 }
