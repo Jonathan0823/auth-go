@@ -1,3 +1,4 @@
+// Package utils is a utility package that provides functions for program's utility operations
 package utils
 
 import (
