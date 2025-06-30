@@ -19,7 +19,7 @@ func (s *service) Register(user models.User) error {
 		return err
 	}
 
-	userFromDB, err := s.repo.GetUserByEmail(user.Email)
+	userFromDB, err := s.repo.GetUserByEmail(user.Email, false)
 	if userFromDB.Email != "" && err == nil {
 		return fmt.Errorf("user with this email already exists")
 	}
@@ -37,16 +37,11 @@ func (s *service) Register(user models.User) error {
 }
 
 func (s *service) Login(user models.User) (string, string, error) {
-	userFromDB, err := s.repo.GetUserByEmail(user.Email)
+	userFromDB, err := s.repo.GetUserByEmail(user.Email, true)
 	if err != nil {
 		return "", "", fmt.Errorf("user not found")
 	}
-	userPassword, err := s.repo.GetPasswordByEmail(user.Email)
-	if err != nil || userPassword == "" {
-		return "", "", fmt.Errorf("internal server error")
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(userPassword), []byte(user.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(user.Password)); err != nil {
 		return "", "", fmt.Errorf("invalid password")
 	}
 
@@ -64,7 +59,7 @@ func (s *service) Login(user models.User) (string, string, error) {
 }
 
 func (s *service) CreateVerifyEmail(email string) error {
-	userFromDB, err := s.repo.GetUserByEmail(email)
+	userFromDB, err := s.repo.GetUserByEmail(email, false)
 	if err != nil || userFromDB.Email == "" {
 		return fmt.Errorf("internal server error")
 	}
@@ -115,7 +110,7 @@ func (s *service) VerifyEmail(id string, c *gin.Context) error {
 }
 
 func (s *service) ForgotPassword(email string) error {
-	userFromDB, err := s.repo.GetUserByEmail(email)
+	userFromDB, err := s.repo.GetUserByEmail(email, false)
 	if err != nil || userFromDB.Email == "" {
 		return fmt.Errorf("internal server error")
 	}

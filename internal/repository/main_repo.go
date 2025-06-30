@@ -20,13 +20,12 @@ type Repository interface {
 
 	// user repo
 	GetUserByID(id int) (models.User, error)
-	GetUserByEmail(email string) (models.User, error)
+	GetUserByEmail(email string, includePassword bool) (models.User, error)
 	CreateUser(user models.User) error
 	GetAllUsers() ([]models.User, error)
 	UpdateUser(user models.UpdateUserRequest) error
 	DeleteUser(id int) error
 	UpdateUserPassword(id int, newPassword string) error
-	GetPasswordByEmail(email string) (string, error)
 }
 
 type repository struct {

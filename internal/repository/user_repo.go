@@ -21,9 +21,17 @@ func (r *repository) GetUserByID(id int) (models.User, error) {
 	return user, nil
 }
 
-func (r *repository) GetUserByEmail(email string) (models.User, error) {
+func (r *repository) GetUserByEmail(email string, includePassword bool) (models.User, error) {
 	var user models.User
-	query := "SELECT id, username, email, updated_at, created_at FROM users WHERE email = $1"
+	selectFields := "id, username, email, updated_at, created_at"
+	if includePassword {
+		selectFields += ", password"
+	}
+	query := fmt.Sprintf(`
+		SELECT 
+		%s
+		FROM users 
+		WHERE email = $1`, selectFields)
 	err := r.db.QueryRow(query, email).Scan(&user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -89,17 +97,4 @@ func (r *repository) UpdateUserPassword(id int, newPassword string) error {
 		return fmt.Errorf("failed to update user password: %v", err)
 	}
 	return nil
-}
-
-func (r *repository) GetPasswordByEmail(email string) (string, error) {
-	var password string
-	query := "SELECT password FROM users WHERE email = $1"
-	err := r.db.QueryRow(query, email).Scan(&password)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", fmt.Errorf("user with email %s is not found", email)
-		}
-		return "", fmt.Errorf("failed to get password: %v", err)
-	}
-	return password, nil
 }
