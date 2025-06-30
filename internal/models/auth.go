@@ -29,13 +29,13 @@ type ResetPasswordRequest struct {
 }
 
 type TokenLog struct {
-	ID               uuid.UUID `json:"id"`
-	UserID           int       `json:"user_id"`
-	JTI              string    `json:"jti"`
-	RefreshedFromJTI string    `json:"refreshed_from_jti"`
-	InvalidatedAt    time.Time `json:"invalidated_at"`
-	ExpiredAt        time.Time `json:"expired_at"`
-	CreatedAt        time.Time `json:"created_at"`
-	IPAddress        string    `json:"ip_address"`
-	UserAgent        string    `json:"user_agent"`
+	ID               uuid.UUID  `json:"id"`
+	UserID           int        `json:"user_id"`
+	JTI              string     `json:"jti"`
+	RefreshedFromJTI *string    `json:"refreshed_from_jti"`
+	InvalidatedAt    *time.Time `json:"invalidated_at"`
+	ExpiredAt        time.Time  `json:"expired_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	IPAddress        string     `json:"ip_address"`
+	UserAgent        string     `json:"user_agent"`
 }
