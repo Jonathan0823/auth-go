@@ -45,12 +45,12 @@ func (s *service) Login(user models.User) (string, string, error) {
 		return "", "", fmt.Errorf("invalid password")
 	}
 
-	accessToken, err := utils.GenerateJWT(userFromDB, "access")
+	accessToken, _, err := utils.GenerateJWT(userFromDB, "access")
 	if err != nil {
 		return "", "", err
 	}
 
-	refreshToken, err := utils.GenerateJWT(userFromDB, "refresh")
+	refreshToken, jtiRefresh, err := utils.GenerateJWT(userFromDB, "refresh")
 	if err != nil {
 		return "", "", err
 	}

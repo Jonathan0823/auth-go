@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func GenerateJWT(user models.User, jwtType string) (string, error) {
+func GenerateJWT(user models.User, jwtType string) (jwtToken string, jti string, err error) {
 	var secretKey []byte
 	switch jwtType {
 	case "access":
@@ -35,19 +35,21 @@ func GenerateJWT(user models.User, jwtType string) (string, error) {
 
 	token := jwt.New(jwt.SigningMethodHS256)
 
+	id := uuid.New().String()
+
 	claims := token.Claims.(jwt.MapClaims)
 	claims["id"] = user.ID
-	claims["jti"] = uuid.New().String()
+	claims["jti"] = id
 	claims["username"] = user.Username
 	claims["email"] = user.Email
 	claims["exp"] = expirationTime.Unix()
 
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return tokenString, nil
+	return tokenString, id, nil
 }
 
 func ValidateJWT(tokenString string, jwtType string) (jwt.MapClaims, error) {

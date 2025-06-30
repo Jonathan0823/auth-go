@@ -70,7 +70,14 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	accessToken, err := utils.GenerateJWT(models.User{Username: claims["username"].(string), Email: claims["email"].(string)}, "access")
+	user := models.User{
+		Username:  claims["username"].(string),
+		Email:     claims["email"].(string),
+		IPAddress: c.ClientIP(),
+		UserAgent: c.GetHeader("User-Agent"),
+	}
+
+	newAccessToken, _, err := utils.GenerateJWT(user, "access")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
