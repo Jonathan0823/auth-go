@@ -10,6 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var secure = os.Getenv("ENVIRONMENT") == "production"
+
 func (h *MainHandler) Register(c *gin.Context) {
 	var user models.User
 	if isValid := utils.BindJSONWithValidation(c, &user); !isValid {
@@ -41,16 +43,16 @@ func (h *MainHandler) Login(c *gin.Context) {
 		domain = "localhost"
 	}
 
-	c.SetCookie("access_token", accessToken, 7*24*3600, "/", domain, false, false)
-
-	c.SetCookie("refresh_token", refreshToken, 7*24*3600, "/", domain, false, true)
+	c.SetCookie("access_token", accessToken, 7*24*3600, "/", domain, secure, false)
+	c.SetCookie("refresh_token", refreshToken, 7*24*3600, "/", domain, secure, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully"})
 }
 
 func (h *MainHandler) Logout(c *gin.Context) {
-	c.SetCookie("access_token", "", -1, "/", os.Getenv("DOMAIN"), false, false)
-	c.SetCookie("refresh_token", "", -1, "/", os.Getenv("DOMAIN"), false, true)
+	domain := os.Getenv("DOMAIN")
+	c.SetCookie("access_token", "", -1, "/", domain, secure, false)
+	c.SetCookie("refresh_token", "", -1, "/", domain, secure, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"})
 }
@@ -79,7 +81,7 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 		domain = "localhost"
 	}
 
-	c.SetCookie("access_token", accessToken, 7*24*3600, "/", domain, false, false)
+	c.SetCookie("access_token", newAccessToken, 7*24*3600, "/", domain, secure, false)
 	c.JSON(http.StatusOK, gin.H{"message": "Access token refreshed successfully"})
 }
 
