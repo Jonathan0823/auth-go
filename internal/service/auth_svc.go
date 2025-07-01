@@ -177,3 +177,10 @@ func (s *service) ResetPassword(id string, newPassword string) error {
 
 	return s.repo.DeleteForgotPasswordByID(id)
 }
+
+func (s *service) InvalidateJWTTokens(oldJTI, newJTI string) error {
+	if oldJTI == "" || newJTI == "" {
+		return fmt.Errorf("old and new jti cannot be empty")
+	}
+	return s.repo.InvalidateTokenLog(oldJTI, newJTI)
+}
