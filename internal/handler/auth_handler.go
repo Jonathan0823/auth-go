@@ -73,6 +73,13 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 		return
 	}
 
+	oldJTI := claims["jti"].(string)
+	isJWTInvalidated, err := h.svc.IsTokenLogInvalidated(oldJTI)
+	if err != nil && isJWTInvalidated {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check token validity"})
+		return
+	}
+
 	user := models.User{
 		Username:  claims["username"].(string),
 		Email:     claims["email"].(string),
@@ -86,7 +93,6 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	oldJTI := claims["jti"].(string)
 	newRefreshToken, newJTI, err := utils.GenerateJWT(user, "refresh")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
