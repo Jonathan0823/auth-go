@@ -1,7 +1,12 @@
 // Package repository provides methods for interacting with the database related to email verification and password reset functionalities
 package repository
 
-import "github.com/Jonathan0823/auth-go/internal/models"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/Jonathan0823/auth-go/internal/models"
+)
 
 func (r *repository) CreateVerifyEmail(verifyEmail models.VerifyEmail) error {
 	_, err := r.db.Exec("INSERT INTO verify_emails (id, user_id, email, expired_at) VALUES ($1, $2, $3, $4)", verifyEmail.ID, verifyEmail.UserID, verifyEmail.Email, verifyEmail.ExpiredAt)
@@ -77,11 +82,23 @@ func (r *repository) GetTokenLogByJTI(jti string) (models.TokenLog, error) {
 }
 
 func (r *repository) InvalidateTokenLog(oldJTI, newJTI string) error {
-	_, err := r.db.Exec(`
-		UPDATE
-		token_log 
-		SET invalidated_at = NOW(), refreshed_from_jti = $1
-		WHERE jti = $2`, newJTI, oldJTI)
+	setClauses := []string{"invalidated_at = NOW()"}
+	args := []any{oldJTI}
+
+	if newJTI != "" {
+		setClauses = append(setClauses, fmt.Sprintf("refreshed_from_jti = $%d", len(args)+1))
+		args = append(args, newJTI)
+	}
+
+	setClause := strings.Join(setClauses, ", ")
+
+	query := fmt.Sprintf(`
+	UPDATE your_table
+	SET %s
+	WHERE jti = $1
+`, setClause)
+
+	_, err := r.db.Exec(query, args...)
 	if err != nil {
 		return err
 	}
