@@ -55,6 +55,21 @@ func (s *service) Login(user models.User) (string, string, error) {
 		return "", "", err
 	}
 
+	tokenLog := models.TokenLog{
+		UserID:           userFromDB.ID,
+		JTI:              jtiRefresh,
+		RefreshedFromJTI: nil,
+		InvalidatedAt:    nil,
+		ExpiredAt:        time.Now().Add(7 * 24 * time.Hour),
+		CreatedAt:        time.Now(),
+		IPAddress:        user.IPAddress,
+		UserAgent:        user.UserAgent,
+	}
+
+	if err := s.repo.CreateTokenLog(tokenLog); err != nil {
+		return "", "", fmt.Errorf("failed to log token: %v", err)
+	}
+
 	return accessToken, refreshToken, nil
 }
 
