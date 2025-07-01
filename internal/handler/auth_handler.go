@@ -32,6 +32,9 @@ func (h *MainHandler) Login(c *gin.Context) {
 		return
 	}
 
+	user.IPAddress = c.ClientIP()
+	user.UserAgent = c.GetHeader("User-Agent")
+
 	accessToken, refreshToken, err := h.svc.Login(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -69,6 +72,8 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 		return
 	}
+
+	_ = claims["jti"].(string)
 
 	user := models.User{
 		Username:  claims["username"].(string),
