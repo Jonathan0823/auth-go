@@ -17,6 +17,7 @@ type Repository interface {
 	CreateTokenLog(tokenLog models.TokenLog) error
 	GetTokenLogByJTI(jti string) (models.TokenLog, error)
 	InvalidateTokenLog(oldJti, newJti string) error
+	IsTokenLogInvalidated(jti string) (bool, error)
 
 	// user repo
 	GetUserByID(id int) (models.User, error)

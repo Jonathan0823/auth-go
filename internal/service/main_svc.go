@@ -15,6 +15,7 @@ type Service interface {
 	VerifyEmail(id string, c *gin.Context) error
 	ResetPassword(tokenStr string, newPassword string) error
 	InvalidateJWTTokens(oldJTI, newJTI string) error
+	IsTokenLogInvalidated(jti string) (bool, error)
 
 	// oauth service
 	OAuthLogin(user models.User) (*models.User, error)

@@ -87,3 +87,12 @@ func (r *repository) InvalidateTokenLog(oldJTI, newJTI string) error {
 	}
 	return nil
 }
+
+func (r *repository) IsTokenLogInvalidated(jti string) (bool, error) {
+	var invalidated bool
+	err := r.db.QueryRow("SELECT EXISTS(SELECT 1 FROM token_log WHERE jti = $1 AND invalidated_at IS NOT NULL)", jti).Scan(&invalidated)
+	if err != nil {
+		return false, err
+	}
+	return invalidated, nil
+}

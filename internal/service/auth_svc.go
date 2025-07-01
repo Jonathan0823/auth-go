@@ -184,3 +184,10 @@ func (s *service) InvalidateJWTTokens(oldJTI, newJTI string) error {
 	}
 	return s.repo.InvalidateTokenLog(oldJTI, newJTI)
 }
+
+func (s *service) IsTokenLogInvalidated(jti string) (bool, error) {
+	if jti == "" {
+		return false, fmt.Errorf("jti cannot be empty")
+	}
+	return s.repo.IsTokenLogInvalidated(jti)
+}
