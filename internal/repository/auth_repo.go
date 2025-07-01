@@ -76,8 +76,12 @@ func (r *repository) GetTokenLogByJTI(jti string) (models.TokenLog, error) {
 	return tokenLog, nil
 }
 
-func (r *repository) InvalidateTokenLog(jti string) error {
-	_, err := r.db.Exec("UPDATE token_log SET invalidated_at = NOW() WHERE jti = $1", jti)
+func (r *repository) InvalidateTokenLog(oldJTI, newJTI string) error {
+	_, err := r.db.Exec(`
+		UPDATE
+		token_log 
+		SET invalidated_at = NOW(), refreshed_from_jti = $1
+		WHERE jti = $2`, newJTI, oldJTI)
 	if err != nil {
 		return err
 	}
