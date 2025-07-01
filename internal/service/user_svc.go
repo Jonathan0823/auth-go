@@ -13,7 +13,7 @@ func (s *service) GetUserByID(id int) (models.User, error) {
 }
 
 func (s *service) GetUserByEmail(email string) (models.User, error) {
-	return s.repo.GetUserByEmail(email)
+	return s.repo.GetUserByEmail(email, false)
 }
 
 func (s *service) GetAllUsers() ([]models.User, error) {
