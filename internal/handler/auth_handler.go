@@ -53,6 +53,22 @@ func (h *MainHandler) Login(c *gin.Context) {
 }
 
 func (h *MainHandler) Logout(c *gin.Context) {
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil || refreshToken == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token not found"})
+		return
+	}
+
+	claims, err := utils.ValidateJWT(refreshToken, "refresh")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+	}
+
+	oldJTI := claims["jti"].(string)
+	if err := h.svc.InvalidateJWTTokens(oldJTI, ""); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to invalidate tokens"})
+		return
+	}
 	domain := os.Getenv("DOMAIN")
 	c.SetCookie("access_token", "", -1, "/", domain, secure, false)
 	c.SetCookie("refresh_token", "", -1, "/", domain, secure, true)
