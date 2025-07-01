@@ -1,4 +1,3 @@
-// Package repository provides methods for interacting with the database related to email verification and password reset functionalities
 package repository
 
 import (
