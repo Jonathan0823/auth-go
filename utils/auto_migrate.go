@@ -49,9 +49,9 @@ func AutoMigrate(db *sql.DB) error {
 		  refreshed_from_jti VARCHAR(100),
 		  invalidated_at TIMESTAMP,
 			expired_at TIMESTAMP NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			ip_address VARCHAR(45) NOT NULL,
-			user_agent TEXT NOT NULL
+			user_agent TEXT NOT NULL,
 			FOREIGN KEY (refreshed_from_jti) REFERENCES token_log(jti)
 		);
 
