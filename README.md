@@ -72,7 +72,7 @@ The application exposes a RESTful API for user authentication and management.
 
 The application is configured using environment variables. Create a `.env` file in the root of the project with the following variables:
 
-```
+```dotenv
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=your_db_user
@@ -80,21 +80,25 @@ DB_PASSWORD=your_db_password
 DB_NAME=your_db_name
 DB_SSL=disable
 
-JWT_SECRET=your_jwt_secret
+PORT=8080
+
+JWT_ACCESS_SECRET=your_jwt_access_secret
 JWT_REFRESH_SECRET=your_jwt_refresh_secret
 
+ALLOWED_ORIGINS=http://localhost:3000
+
+EMAIL=your_email_service
+PASSWORD=your_email_password
+
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_gihub_client_secret
+
 GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URL=http://localhost:8080/api/auth/google/callback
+GOOGLE_CLIENT_SECRET=your_google_client-secret
+BASE_URL=http://localhost:8080
 
-GITHUB=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
-GITHUB_REDIRECT_URL=http://localhost:8080/api/auth/github/callback
-
-EMAIL_HOST=your_email_host
-EMAIL_PORT=your_email_port
-EMAIL_USER=your_email_user
-EMAIL_PASSWORD=your_email_password
+SESSION_SECRET=your_session_secret
+ENVIRONMENT=development
 ```
 
 ## Dependencies
