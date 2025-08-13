@@ -21,10 +21,10 @@ type Repository interface {
 	IsTokenLogInvalidated(jti string) (bool, error)
 
 	// user repo
-	GetUserByID(id int) (models.User, error)
-	GetUserByEmail(email string, includePassword bool) (models.User, error)
+	GetUserByID(id int) (*models.User, error)
+	GetUserByEmail(email string, includePassword bool) (*models.User, error)
 	CreateUser(user models.User) error
-	GetAllUsers() ([]models.User, error)
+	GetAllUsers() ([]*models.User, error)
 	UpdateUser(user models.UpdateUserRequest) error
 	DeleteUser(id int) error
 	UpdateUserPassword(id int, newPassword string) error
