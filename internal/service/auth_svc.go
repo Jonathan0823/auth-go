@@ -16,7 +16,7 @@ import (
 func (s *service) Register(user models.User) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to hash password: %v", err)
 	}
 
 	userFromDB, err := s.repo.GetUserByEmail(user.Email, false)
@@ -26,7 +26,7 @@ func (s *service) Register(user models.User) error {
 
 	user.Password = string(hashedPassword)
 	if err := s.repo.CreateUser(user); err != nil {
-		return err
+		return fmt.Errorf("failed to create user: %v", err)
 	}
 
 	if err := s.CreateVerifyEmail(user.Email); err != nil {
@@ -47,12 +47,12 @@ func (s *service) Login(user models.User) (string, string, error) {
 
 	accessToken, _, err := utils.GenerateJWT(userFromDB, "access")
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to generate access token: %v", err)
 	}
 
 	refreshToken, jtiRefresh, err := utils.GenerateJWT(userFromDB, "refresh")
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to generate refresh token: %v", err)
 	}
 
 	tokenLog := models.TokenLog{
@@ -87,7 +87,7 @@ func (s *service) CreateVerifyEmail(email string) error {
 	}
 
 	if err := s.repo.CreateVerifyEmail(verifyEmail); err != nil {
-		return err
+		return fmt.Errorf("failed to create verification email: %v", err)
 	}
 
 	if err := utils.SendEmail(email, "Verify Email", "Click here to verify your email"); err != nil {
