@@ -34,7 +34,7 @@ func (h *MainHandler) GetAllUsers(c *gin.Context) {
 	}
 
 	if users == nil {
-		users = []models.User{}
+		users = []*models.User{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Users retrieved successfully", "users": users})

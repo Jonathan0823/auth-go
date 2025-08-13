@@ -38,19 +38,19 @@ func (s *service) Register(user models.User) error {
 
 func (s *service) Login(user models.User) (string, string, error) {
 	userFromDB, err := s.repo.GetUserByEmail(user.Email, true)
-	if err != nil {
+	if err != nil || userFromDB == nil {
 		return "", "", fmt.Errorf("user not found")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(user.Password)); err != nil {
 		return "", "", fmt.Errorf("invalid password")
 	}
 
-	accessToken, _, err := utils.GenerateJWT(userFromDB, "access")
+	accessToken, _, err := utils.GenerateJWT(*userFromDB, "access")
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate access token: %v", err)
 	}
 
-	refreshToken, jtiRefresh, err := utils.GenerateJWT(userFromDB, "refresh")
+	refreshToken, jtiRefresh, err := utils.GenerateJWT(*userFromDB, "refresh")
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate refresh token: %v", err)
 	}

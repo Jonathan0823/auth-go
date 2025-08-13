@@ -18,5 +18,5 @@ func (s *service) OAuthLogin(user models.User) (*models.User, error) {
 		}
 	}
 
-	return &userData, nil
+	return userData, nil
 }

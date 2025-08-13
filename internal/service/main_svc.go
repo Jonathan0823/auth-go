@@ -21,9 +21,9 @@ type Service interface {
 	OAuthLogin(user models.User) (*models.User, error)
 
 	// user service
-	GetUserByID(id int) (models.User, error)
-	GetUserByEmail(email string) (models.User, error)
-	GetAllUsers() ([]models.User, error)
+	GetUserByID(id int) (*models.User, error)
+	GetUserByEmail(email string) (*models.User, error)
+	GetAllUsers() ([]*models.User, error)
 	UpdateUser(user models.UpdateUserRequest, c *gin.Context) error
 	DeleteUser(id int, c *gin.Context) error
 }

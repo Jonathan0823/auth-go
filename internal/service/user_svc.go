@@ -8,23 +8,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (s *service) GetUserByID(id int) (models.User, error) {
+func (s *service) GetUserByID(id int) (*models.User, error) {
 	data, err := s.repo.GetUserByID(id)
 	if err != nil {
-		return models.User{}, fmt.Errorf("user not found: %w", err)
+		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	return data, nil
 }
 
-func (s *service) GetUserByEmail(email string) (models.User, error) {
+func (s *service) GetUserByEmail(email string) (*models.User, error) {
 	data, err := s.repo.GetUserByEmail(email, false)
 	if err != nil {
-		return models.User{}, fmt.Errorf("user not found: %w", err)
+		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	return data, nil
 }
 
-func (s *service) GetAllUsers() ([]models.User, error) {
+func (s *service) GetAllUsers() ([]*models.User, error) {
 	data, err := s.repo.GetAllUsers()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all users: %w", err)
