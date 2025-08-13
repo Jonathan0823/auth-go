@@ -1,6 +1,8 @@
 package service
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/Jonathan0823/auth-go/internal/models"
@@ -11,6 +13,9 @@ import (
 func (s *service) GetUserByID(id int) (*models.User, error) {
 	data, err := s.repo.GetUserByID(id)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user not found with id %d: %w", id, err)
+		}
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	return data, nil
@@ -19,6 +24,9 @@ func (s *service) GetUserByID(id int) (*models.User, error) {
 func (s *service) GetUserByEmail(email string) (*models.User, error) {
 	data, err := s.repo.GetUserByEmail(email, false)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user not found with email %s: %w", email, err)
+		}
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	return data, nil
