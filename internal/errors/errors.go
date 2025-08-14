@@ -48,3 +48,10 @@ func InternalServerError(message string) *Error {
 		Message: message,
 	}
 }
+
+func Conflict(message string) *Error {
+	return &Error{
+		Code:    http.StatusConflict,
+		Message: message,
+	}
+}
