@@ -18,16 +18,19 @@ func (r *repository) GetUserByID(id int) (*models.User, error) {
 
 func (r *repository) GetUserByEmail(email string, includePassword bool) (*models.User, error) {
 	var user models.User
+	var scanFields []any
+	scanFields = append(scanFields, &user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
 	selectFields := "id, username, email, updated_at, created_at"
 	if includePassword {
 		selectFields += ", password"
+		scanFields = append(scanFields, &user.Password)
 	}
 	query := fmt.Sprintf(`
 		SELECT 
 		%s
 		FROM users 
 		WHERE email = $1`, selectFields)
-	err := r.db.QueryRow(query, email).Scan(&user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
+	err := r.db.QueryRow(query, email).Scan(scanFields...)
 	if err != nil {
 		return nil, err
 	}
