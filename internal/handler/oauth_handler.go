@@ -16,7 +16,7 @@ func (h *MainHandler) OAuthLogin(c *gin.Context) {
 func (h *MainHandler) OAuthCallback(c *gin.Context) {
 	user, err := gothic.CompleteUserAuth(c.Writer, c.Request)
 	if err != nil {
-		c.Error(errors.Unauthorized("OAuth authentication failed: " + err.Error()))
+		c.Error(errors.Unauthorized("OAuth authentication failed", err))
 		return
 	}
 

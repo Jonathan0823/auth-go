@@ -56,13 +56,13 @@ func (h *MainHandler) Login(c *gin.Context) {
 func (h *MainHandler) Logout(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		c.Error(errors.Unauthorized("Refresh token not found"))
+		c.Error(errors.Unauthorized("Refresh token not found", err))
 		return
 	}
 
 	claims, err := utils.ValidateJWT(refreshToken, "refresh")
 	if err != nil {
-		c.Error(errors.Unauthorized("Invalid refresh token"))
+		c.Error(errors.Unauthorized("Invalid refresh token", err))
 	}
 
 	oldJTI := claims["jti"].(string)
@@ -80,7 +80,7 @@ func (h *MainHandler) Logout(c *gin.Context) {
 func (h *MainHandler) Refresh(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		c.Error(errors.Unauthorized("Refresh token not found"))
+		c.Error(errors.Unauthorized("Refresh token not found", err))
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *MainHandler) VerifyEmail(c *gin.Context) {
 func (h *MainHandler) ResendVerifyEmail(c *gin.Context) {
 	email := c.Query("email")
 	if email == "" {
-		c.Error(errors.BadRequest("Email is required"))
+		c.Error(errors.BadRequest("Email is required", nil))
 		return
 	}
 

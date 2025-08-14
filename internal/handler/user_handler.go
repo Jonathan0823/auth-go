@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
@@ -13,13 +14,13 @@ func (h *MainHandler) GetUserByID(c *gin.Context) {
 	id := c.Param("id")
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		c.Error(errors.BadRequest("Invalid user ID", err))
 		return
 	}
 
 	user, err := h.svc.GetUserByID(idInt)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -29,7 +30,7 @@ func (h *MainHandler) GetUserByID(c *gin.Context) {
 func (h *MainHandler) GetAllUsers(c *gin.Context) {
 	users, err := h.svc.GetAllUsers()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -45,7 +46,7 @@ func (h *MainHandler) GetUserByEmail(c *gin.Context) {
 
 	user, err := h.svc.GetUserByEmail(email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -59,7 +60,7 @@ func (h *MainHandler) UpdateUser(c *gin.Context) {
 	}
 
 	if err := h.svc.UpdateUser(user, c); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -70,12 +71,12 @@ func (h *MainHandler) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		c.Error(errors.BadRequest("Invalid user ID", err))
 		return
 	}
 
 	if err := h.svc.DeleteUser(idInt, c); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -85,13 +86,13 @@ func (h *MainHandler) DeleteUser(c *gin.Context) {
 func (h *MainHandler) GetCurrentUser(c *gin.Context) {
 	user, err := utils.GetUser(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve current user"})
+		c.Error(errors.Unauthorized("User is not authenticated", err))
 		return
 	}
 
 	data, err := h.svc.GetUserByID(user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Current user retrieved successfully", "user": data})

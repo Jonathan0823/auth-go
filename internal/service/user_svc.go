@@ -2,9 +2,9 @@ package service
 
 import (
 	"database/sql"
-	"errors"
-	"fmt"
+	goerrors "errors"
 
+	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
@@ -13,10 +13,10 @@ import (
 func (s *service) GetUserByID(id int) (*models.User, error) {
 	data, err := s.repo.GetUserByID(id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("user not found with id %d: %w", id, err)
+		if goerrors.Is(err, sql.ErrNoRows) {
+			return nil, errors.NotFound("user is not found", err)
 		}
-		return nil, fmt.Errorf("user not found: %w", err)
+		return nil, errors.InternalServerError("failed to get user by id", err)
 	}
 	return data, nil
 }
@@ -24,10 +24,10 @@ func (s *service) GetUserByID(id int) (*models.User, error) {
 func (s *service) GetUserByEmail(email string) (*models.User, error) {
 	data, err := s.repo.GetUserByEmail(email, false)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("user not found with email %s: %w", email, err)
+		if goerrors.Is(err, sql.ErrNoRows) {
+			return nil, errors.NotFound("user not found", err)
 		}
-		return nil, fmt.Errorf("user not found: %w", err)
+		return nil, errors.InternalServerError("failed to get user by email", err)
 	}
 	return data, nil
 }
@@ -35,7 +35,7 @@ func (s *service) GetUserByEmail(email string) (*models.User, error) {
 func (s *service) GetAllUsers() ([]*models.User, error) {
 	data, err := s.repo.GetAllUsers()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all users: %w", err)
+		return nil, errors.InternalServerError("failed to get all users", err)
 	}
 	return data, nil
 }
@@ -43,15 +43,15 @@ func (s *service) GetAllUsers() ([]*models.User, error) {
 func (s *service) UpdateUser(user models.UpdateUserRequest, c *gin.Context) error {
 	currentUser, err := utils.GetUser(c)
 	if err != nil {
-		return fmt.Errorf("user is not found")
+		return errors.Unauthorized("user is not found", err)
 	}
 
 	if currentUser.ID != user.ID {
-		return fmt.Errorf("you are not authorized to update this user")
+		return errors.Forbidden("you are not authorized to update this user", nil)
 	}
 
 	if err := s.repo.UpdateUser(user); err != nil {
-		return fmt.Errorf("failed to update user: %w", err)
+		return errors.InternalServerError("failed to update user", err)
 	}
 	return nil
 }
@@ -59,15 +59,15 @@ func (s *service) UpdateUser(user models.UpdateUserRequest, c *gin.Context) erro
 func (s *service) DeleteUser(id int, c *gin.Context) error {
 	currentUser, err := utils.GetUser(c)
 	if err != nil {
-		return fmt.Errorf("user is not found")
+		return errors.Unauthorized("user is not found", err)
 	}
 
 	if currentUser.ID != id {
-		return fmt.Errorf("you are not authorized to update this user")
+		return errors.Forbidden("you are not authorized to delete this user", nil)
 	}
 
 	if err := s.repo.DeleteUser(id); err != nil {
-		return fmt.Errorf("failed to delete user: %w", err)
+		return errors.InternalServerError("failed to delete user", err)
 	}
 	return nil
 }
