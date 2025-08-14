@@ -82,7 +82,10 @@ func (s *service) Login(user models.User) (string, string, error) {
 func (s *service) CreateVerifyEmail(email string) error {
 	userFromDB, err := s.repo.GetUserByEmail(email, false)
 	if err != nil || userFromDB == nil {
-		return errors.NotFound("user not found", err)
+		if goerror.Is(err, sql.ErrNoRows) {
+			return errors.NotFound("user not found", err)
+		}
+		return errors.InternalServerError("failed to get user by email", err)
 	}
 
 	verifyEmail := models.VerifyEmail{
@@ -127,7 +130,10 @@ func (s *service) VerifyEmail(id string, c *gin.Context) error {
 func (s *service) ForgotPassword(email string) error {
 	userFromDB, err := s.repo.GetUserByEmail(email, false)
 	if err != nil || userFromDB == nil {
-		return errors.NotFound("email not found", err)
+		if goerror.Is(err, sql.ErrNoRows) {
+			return errors.NotFound("user not found", err)
+		}
+		return errors.InternalServerError("failed to get user by email", err)
 	}
 
 	data := models.ForgotPassword{
