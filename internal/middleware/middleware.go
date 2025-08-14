@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/Jonathan0823/auth-go/internal/errors"
@@ -48,6 +49,9 @@ func ErrorHandler() gin.HandlerFunc {
 		if len(c.Errors) > 0 {
 			err := c.Errors.Last().Err
 			if appErr, ok := err.(*errors.Error); ok {
+				if appErr.Err != nil {
+					log.Println("Internal error:", appErr.Err)
+				}
 				c.JSON(appErr.Code, gin.H{"error": appErr.Message})
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
