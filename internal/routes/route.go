@@ -9,6 +9,7 @@ import (
 
 func RegisterRoutes(r *gin.Engine, mainHandler *handler.MainHandler) {
 	api := r.Group("/api")
+	api.Use(middleware.ErrorHandler())
 	auth := api.Group("/auth")
 	{
 		provider := auth.Group("/:provider")
