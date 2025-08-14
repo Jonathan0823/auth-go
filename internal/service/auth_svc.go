@@ -17,21 +17,21 @@ import (
 func (s *service) Register(user models.User) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf("failed to hash password: %v", err)
+		return errors.InternalServerError("failed to hash password")
 	}
 
 	userFromDB, err := s.repo.GetUserByEmail(user.Email, false)
 	if userFromDB == nil && err == nil {
-		return fmt.Errorf("user with this email already exists")
+		return errors.Conflict("email already exists")
 	}
 
 	user.Password = string(hashedPassword)
 	if err := s.repo.CreateUser(user); err != nil {
-		return fmt.Errorf("failed to create user: %v", err)
+		return errors.InternalServerError(fmt.Sprintf("failed to create user: %v", err))
 	}
 
 	if err := s.CreateVerifyEmail(user.Email); err != nil {
-		return fmt.Errorf("failed to create verification email: %v", err)
+		return errors.InternalServerError(fmt.Sprintf("failed to create verification email: %v", err))
 	}
 
 	return nil
@@ -40,20 +40,20 @@ func (s *service) Register(user models.User) error {
 func (s *service) Login(user models.User) (string, string, error) {
 	userFromDB, err := s.repo.GetUserByEmail(user.Email, true)
 	if err != nil || userFromDB == nil {
-		return "", "", fmt.Errorf("user not found")
+		return "", "", errors.NotFound("user not found")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(user.Password)); err != nil {
-		return "", "", fmt.Errorf("invalid password")
+		return "", "", errors.Unauthorized("invalid credentials")
 	}
 
 	accessToken, _, err := utils.GenerateJWT(*userFromDB, "access")
 	if err != nil {
-		return "", "", fmt.Errorf("failed to generate access token: %v", err)
+		return "", "", errors.InternalServerError("failed to generate access token")
 	}
 
 	refreshToken, jtiRefresh, err := utils.GenerateJWT(*userFromDB, "refresh")
 	if err != nil {
-		return "", "", fmt.Errorf("failed to generate refresh token: %v", err)
+		return "", "", errors.InternalServerError("failed to generate refresh token")
 	}
 
 	tokenLog := models.TokenLog{
@@ -68,7 +68,7 @@ func (s *service) Login(user models.User) (string, string, error) {
 	}
 
 	if err := s.repo.CreateTokenLog(tokenLog); err != nil {
-		return "", "", fmt.Errorf("failed to log token: %v", err)
+		return "", "", errors.InternalServerError(fmt.Sprintf("failed to create token log: %v", err))
 	}
 
 	return accessToken, refreshToken, nil
@@ -76,8 +76,8 @@ func (s *service) Login(user models.User) (string, string, error) {
 
 func (s *service) CreateVerifyEmail(email string) error {
 	userFromDB, err := s.repo.GetUserByEmail(email, false)
-	if err != nil || userFromDB.Email == "" {
-		return fmt.Errorf("internal server error")
+	if err != nil || userFromDB == nil {
+		return errors.NotFound("user not found")
 	}
 
 	verifyEmail := models.VerifyEmail{
@@ -88,11 +88,11 @@ func (s *service) CreateVerifyEmail(email string) error {
 	}
 
 	if err := s.repo.CreateVerifyEmail(verifyEmail); err != nil {
-		return fmt.Errorf("failed to create verification email: %v", err)
+		return errors.InternalServerError(fmt.Sprintf("failed to create verification email: %v", err))
 	}
 
 	if err := utils.SendEmail(email, "Verify Email", "Click here to verify your email"); err != nil {
-		return fmt.Errorf("failed to send email: %v", err)
+		return errors.InternalServerError(fmt.Sprintf("failed to send verification email: %v", err))
 	}
 
 	return nil
@@ -101,25 +101,28 @@ func (s *service) CreateVerifyEmail(email string) error {
 func (s *service) VerifyEmail(id string, c *gin.Context) error {
 	_, err := uuid.Parse(id)
 	if err != nil {
-		return fmt.Errorf("invalid token")
+		return errors.BadRequest("invalid token")
 	}
 
 	verifyEmail, err := s.repo.GetVerifyEmailByID(id)
 	if err != nil || verifyEmail.ID == uuid.Nil {
-		return fmt.Errorf("internal server error")
+		return errors.InternalServerError("internal server error")
 	}
 
 	if time.Now().After(verifyEmail.ExpiredAt) {
-		return fmt.Errorf("token expired")
+		return errors.BadRequest("token expired")
 	}
 
-	return s.repo.VerifyEmail(id)
+	if err := s.repo.VerifyEmail(id); err != nil {
+		return errors.InternalServerError(fmt.Sprintf("failed to verify email: %v", err))
+	}
+	return nil
 }
 
 func (s *service) ForgotPassword(email string) error {
 	userFromDB, err := s.repo.GetUserByEmail(email, false)
-	if err != nil || userFromDB.Email == "" {
-		return fmt.Errorf("internal server error")
+	if err != nil || userFromDB == nil {
+		return errors.NotFound("user not found")
 	}
 
 	data := models.ForgotPassword{
@@ -130,7 +133,7 @@ func (s *service) ForgotPassword(email string) error {
 	}
 
 	if err := s.repo.CreateForgotPasswordEmail(data); err != nil {
-		return fmt.Errorf("failed to create forgot password email: %v", err)
+		return errors.InternalServerError(fmt.Sprintf("failed to create forgot password email: %v", err))
 	}
 
 	baseURL := os.Getenv("BASE_URL")
@@ -138,7 +141,7 @@ func (s *service) ForgotPassword(email string) error {
       Click here to reset your password: <a href="%s/reset-password?id=%s">Reset Password</a>`,
 		baseURL, data.ID.String(),
 	)); err != nil {
-		return fmt.Errorf("failed to send email: %v", err)
+		return errors.InternalServerError(fmt.Sprintf("failed to send forgot password email: %v", err))
 	}
 
 	return nil
@@ -146,28 +149,31 @@ func (s *service) ForgotPassword(email string) error {
 
 func (s *service) ResetPassword(id string, newPassword string) error {
 	if _, err := uuid.Parse(id); err != nil {
-		return fmt.Errorf("invalid token")
+		return errors.BadRequest("invalid token")
 	}
 
 	forgotPassword, err := s.repo.GetForgotPasswordByID(id)
 	if err != nil || forgotPassword.ID == uuid.Nil {
-		return fmt.Errorf("internal server error")
+		return errors.InternalServerError("internal server error")
 	}
 
 	if time.Now().After(forgotPassword.ExpiredAt) {
-		return fmt.Errorf("token expired")
+		return errors.BadRequest("token expired")
 	}
 
 	hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf("failed to hash new password")
+		return errors.InternalServerError("failed to hash new password")
 	}
 
 	if err = s.repo.UpdateUserPassword(forgotPassword.UserID, string(hashedNewPassword)); err != nil {
-		return fmt.Errorf("failed to update password: %v", err)
+		return errors.InternalServerError(fmt.Sprintf("failed to update user password: %v", err))
 	}
 
-	return s.repo.DeleteForgotPasswordByID(id)
+	if err := s.repo.DeleteForgotPasswordByID(id); err != nil {
+		return errors.InternalServerError(fmt.Sprintf("failed to delete forgot password record: %v", err))
+	}
+	return nil
 }
 
 func (s *service) RefreshTokens(refreshToken, ip, userAgent string) (string, string, error) {
@@ -210,12 +216,19 @@ func (s *service) InvalidateJWTTokens(oldJTI, newJTI string) error {
 	if oldJTI == "" || newJTI == "" {
 		return errors.BadRequest("oldJTI and newJTI cannot be empty")
 	}
-	return s.repo.InvalidateTokenLog(oldJTI, newJTI)
+	if err := s.repo.InvalidateTokenLog(oldJTI, newJTI); err != nil {
+		return errors.InternalServerError(fmt.Sprintf("failed to invalidate token log: %v", err))
+	}
+	return nil
 }
 
 func (s *service) IsTokenLogInvalidated(jti string) (bool, error) {
 	if jti == "" {
 		return false, errors.BadRequest("jti cannot be empty")
 	}
-	return s.repo.IsTokenLogInvalidated(jti)
+	invalidated, err := s.repo.IsTokenLogInvalidated(jti)
+	if err != nil {
+		return false, errors.InternalServerError(fmt.Sprintf("failed to check if token log is invalidated: %v", err))
+	}
+	return invalidated, nil
 }

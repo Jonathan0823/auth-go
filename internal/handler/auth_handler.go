@@ -20,7 +20,7 @@ func (h *MainHandler) Register(c *gin.Context) {
 	}
 
 	if err := h.svc.Register(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -38,7 +38,7 @@ func (h *MainHandler) Login(c *gin.Context) {
 
 	accessToken, refreshToken, err := h.svc.Login(user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -56,18 +56,18 @@ func (h *MainHandler) Login(c *gin.Context) {
 func (h *MainHandler) Logout(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token not found"})
+		c.Error(errors.Unauthorized("Refresh token not found"))
 		return
 	}
 
 	claims, err := utils.ValidateJWT(refreshToken, "refresh")
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		c.Error(errors.Unauthorized("Invalid refresh token"))
 	}
 
 	oldJTI := claims["jti"].(string)
 	if err := h.svc.InvalidateJWTTokens(oldJTI, ""); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to invalidate tokens"})
+		c.Error(err)
 		return
 	}
 	domain := os.Getenv("DOMAIN")
@@ -104,7 +104,7 @@ func (h *MainHandler) VerifyEmail(c *gin.Context) {
 	id := c.Query("id")
 
 	if err := h.svc.VerifyEmail(id, c); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -114,12 +114,12 @@ func (h *MainHandler) VerifyEmail(c *gin.Context) {
 func (h *MainHandler) ResendVerifyEmail(c *gin.Context) {
 	email := c.Query("email")
 	if email == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
+		c.Error(errors.BadRequest("Email is required"))
 		return
 	}
 
 	if err := h.svc.CreateVerifyEmail(email); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -136,7 +136,7 @@ func (h *MainHandler) ForgotPassword(c *gin.Context) {
 	}
 
 	if err := h.svc.ForgotPassword(user.Email); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -150,7 +150,7 @@ func (h *MainHandler) ResetPassword(c *gin.Context) {
 	}
 
 	if err := h.svc.ResetPassword(req.ID, req.Password); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
