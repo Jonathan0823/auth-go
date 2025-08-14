@@ -98,12 +98,7 @@ func (s *service) CreateVerifyEmail(email string) error {
 }
 
 func (s *service) VerifyEmail(id string, c *gin.Context) error {
-	user, err := utils.GetUser(c)
-	if err != nil {
-		return fmt.Errorf("failed to get user from context: %v", err)
-	}
-
-	_, err = uuid.Parse(id)
+	_, err := uuid.Parse(id)
 	if err != nil {
 		return fmt.Errorf("invalid token")
 	}
@@ -111,10 +106,6 @@ func (s *service) VerifyEmail(id string, c *gin.Context) error {
 	verifyEmail, err := s.repo.GetVerifyEmailByID(id)
 	if err != nil || verifyEmail.ID == uuid.Nil {
 		return fmt.Errorf("internal server error")
-	}
-
-	if verifyEmail.Email != user.Email {
-		return fmt.Errorf("you are not authorized to verify this email")
 	}
 
 	if time.Now().After(verifyEmail.ExpiredAt) {
