@@ -11,14 +11,13 @@ import (
 )
 
 func (h *MainHandler) GetUserByID(c *gin.Context) {
-	id := c.Param("id")
-	idInt, err := strconv.Atoi(id)
-	if err != nil {
-		c.Error(errors.BadRequest("Invalid user ID", err))
+	id, _ := strconv.Atoi(c.Param("id"))
+	if id == 0 {
+		c.Error(errors.BadRequest("Invalid user ID", nil))
 		return
 	}
 
-	user, err := h.svc.GetUserByID(idInt)
+	user, err := h.svc.GetUserByID(id)
 	if err != nil {
 		c.Error(err)
 		return
@@ -68,14 +67,13 @@ func (h *MainHandler) UpdateUser(c *gin.Context) {
 }
 
 func (h *MainHandler) DeleteUser(c *gin.Context) {
-	id := c.Param("id")
-	idInt, err := strconv.Atoi(id)
-	if err != nil {
-		c.Error(errors.BadRequest("Invalid user ID", err))
+	id, _ := strconv.Atoi(c.Param("id"))
+	if id == 0 {
+		c.Error(errors.BadRequest("Invalid user ID", nil))
 		return
 	}
 
-	if err := h.svc.DeleteUser(idInt, c); err != nil {
+	if err := h.svc.DeleteUser(id, c); err != nil {
 		c.Error(err)
 		return
 	}
