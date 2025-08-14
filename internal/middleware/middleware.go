@@ -11,35 +11,41 @@ import (
 	"github.com/markbates/goth/gothic"
 )
 
-func AuthMiddleware(c *gin.Context) {
-	token, err := c.Cookie("access_token")
-	if err != nil || token == "" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: missing token"})
-		return
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token, err := c.Cookie("access_token")
+		if err != nil || token == "" {
+			c.Error(errors.Unauthorized("Unauthorized: missing token", err))
+			c.Abort()
+			return
+		}
+
+		user, err := utils.ValidateJWT(token, "access")
+		if err != nil {
+			c.Error(errors.Unauthorized("Unauthorized: invalid token", err))
+			c.Abort()
+			return
+		}
+
+		c.Set("user", user)
+
+		c.Next()
 	}
-
-	user, err := utils.ValidateJWT(token, "access")
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-		return
-	}
-
-	c.Set("user", user)
-
-	c.Next()
 }
 
-func OAuthMiddleware(c *gin.Context) {
-	provider := c.Param("provider")
-	if provider == "" {
-		provider = "github"
-	}
+func OAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		provider := c.Param("provider")
+		if provider == "" {
+			provider = "github"
+		}
 
-	gothic.GetProviderName = func(req *http.Request) (string, error) {
-		return provider, nil
-	}
+		gothic.GetProviderName = func(req *http.Request) (string, error) {
+			return provider, nil
+		}
 
-	c.Next()
+		c.Next()
+	}
 }
 
 func ErrorHandler() gin.HandlerFunc {
