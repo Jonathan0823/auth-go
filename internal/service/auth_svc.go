@@ -2,6 +2,8 @@
 package service
 
 import (
+	"database/sql"
+	goerror "errors"
 	"fmt"
 	"os"
 	"time"
@@ -39,8 +41,11 @@ func (s *service) Register(user models.User) error {
 
 func (s *service) Login(user models.User) (string, string, error) {
 	userFromDB, err := s.repo.GetUserByEmail(user.Email, true)
-	if err != nil || userFromDB == nil {
-		return "", "", errors.NotFound("user not found", err)
+	if err != nil && userFromDB == nil {
+		if goerror.Is(err, sql.ErrNoRows) {
+			return "", "", errors.NotFound("user not found", err)
+		}
+		return "", "", errors.InternalServerError("failed to get user by email", err)
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(user.Password)); err != nil {
 		return "", "", errors.Unauthorized("invalid credentials", err)
