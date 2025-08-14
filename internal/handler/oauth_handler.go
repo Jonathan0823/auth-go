@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/markbates/goth/gothic"
@@ -15,7 +16,7 @@ func (h *MainHandler) OAuthLogin(c *gin.Context) {
 func (h *MainHandler) OAuthCallback(c *gin.Context) {
 	user, err := gothic.CompleteUserAuth(c.Writer, c.Request)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(errors.Unauthorized("OAuth authentication failed: " + err.Error()))
 		return
 	}
 
@@ -29,7 +30,7 @@ func (h *MainHandler) OAuthCallback(c *gin.Context) {
 
 	userData, err := h.svc.OAuthLogin(data)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
