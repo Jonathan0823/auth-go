@@ -4,6 +4,7 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/markbates/goth/gothic"
@@ -38,4 +39,20 @@ func OAuthMiddleware(c *gin.Context) {
 	}
 
 	c.Next()
+}
+
+func ErrorHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+
+		if len(c.Errors) > 0 {
+			err := c.Errors.Last().Err
+			if appErr, ok := err.(*errors.Error); ok {
+				c.JSON(appErr.Code, gin.H{"error": appErr.Message})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			}
+			c.Abort()
+		}
+	}
 }
