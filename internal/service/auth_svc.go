@@ -114,6 +114,9 @@ func (s *service) VerifyEmail(id string, c *gin.Context) error {
 
 	verifyEmail, err := s.repo.GetVerifyEmailByID(id)
 	if err != nil || verifyEmail.ID == uuid.Nil {
+		if goerror.Is(err, sql.ErrNoRows) {
+			return errors.NotFound("verification token not found", err)
+		}
 		return errors.InternalServerError("internal server error", err)
 	}
 
@@ -165,6 +168,9 @@ func (s *service) ResetPassword(id string, newPassword string) error {
 
 	forgotPassword, err := s.repo.GetForgotPasswordByID(id)
 	if err != nil || forgotPassword.ID == uuid.Nil {
+		if goerror.Is(err, sql.ErrNoRows) {
+			return errors.NotFound("forgot password token not found", err)
+		}
 		return errors.InternalServerError("internal server error", err)
 	}
 
