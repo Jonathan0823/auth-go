@@ -21,7 +21,7 @@ func (s *service) Register(user models.User) error {
 	}
 
 	userFromDB, err := s.repo.GetUserByEmail(user.Email, false)
-	if userFromDB == nil && err == nil {
+	if userFromDB != nil && err == nil {
 		return errors.Conflict("email already exists", err)
 	}
 
