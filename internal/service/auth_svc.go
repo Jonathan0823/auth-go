@@ -20,7 +20,7 @@ func (s *service) Register(user models.User) error {
 	}
 
 	userFromDB, err := s.repo.GetUserByEmail(user.Email, false)
-	if userFromDB.Email != "" && err == nil {
+	if userFromDB == nil && err == nil {
 		return fmt.Errorf("user with this email already exists")
 	}
 
