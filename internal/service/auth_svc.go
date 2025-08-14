@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
@@ -169,16 +170,52 @@ func (s *service) ResetPassword(id string, newPassword string) error {
 	return s.repo.DeleteForgotPasswordByID(id)
 }
 
+func (s *service) RefreshTokens(refreshToken, ip, userAgent string) (string, string, error) {
+	claims, err := utils.ValidateJWT(refreshToken, "refresh")
+	if err != nil {
+		return "", "", errors.Unauthorized("invalid refresh token")
+	}
+
+	oldJTI := claims["jti"].(string)
+	isJWTInvalidated, err := s.IsTokenLogInvalidated(oldJTI)
+	if err != nil && isJWTInvalidated {
+		return "", "", errors.Unauthorized("invalidated refresh token")
+	}
+
+	user := models.User{
+		Username:  claims["username"].(string),
+		Email:     claims["email"].(string),
+		IPAddress: ip,
+		UserAgent: userAgent,
+	}
+
+	newAccessToken, _, err := utils.GenerateJWT(user, "access")
+	if err != nil {
+		return "", "", errors.InternalServerError("failed to generate access token")
+	}
+
+	newRefreshToken, newJTI, err := utils.GenerateJWT(user, "refresh")
+	if err != nil {
+		return "", "", errors.InternalServerError("failed to generate refresh token")
+	}
+
+	if err := s.InvalidateJWTTokens(oldJTI, newJTI); err != nil {
+		return "", "", errors.InternalServerError("failed to invalidate old tokens")
+	}
+
+	return newAccessToken, newRefreshToken, nil
+}
+
 func (s *service) InvalidateJWTTokens(oldJTI, newJTI string) error {
 	if oldJTI == "" || newJTI == "" {
-		return fmt.Errorf("old and new jti cannot be empty")
+		return errors.BadRequest("oldJTI and newJTI cannot be empty")
 	}
 	return s.repo.InvalidateTokenLog(oldJTI, newJTI)
 }
 
 func (s *service) IsTokenLogInvalidated(jti string) (bool, error) {
 	if jti == "" {
-		return false, fmt.Errorf("jti cannot be empty")
+		return false, errors.BadRequest("jti cannot be empty")
 	}
 	return s.repo.IsTokenLogInvalidated(jti)
 }

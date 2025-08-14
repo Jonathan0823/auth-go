@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
@@ -79,50 +80,19 @@ func (h *MainHandler) Logout(c *gin.Context) {
 func (h *MainHandler) Refresh(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token not found"})
+		c.Error(errors.Unauthorized("Refresh token not found"))
 		return
 	}
 
-	claims, err := utils.ValidateJWT(refreshToken, "refresh")
+	newAccessToken, newRefreshToken, err := h.svc.RefreshTokens(refreshToken, c.ClientIP(), c.GetHeader("User-Agent"))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
-		return
-	}
-
-	oldJTI := claims["jti"].(string)
-	isJWTInvalidated, err := h.svc.IsTokenLogInvalidated(oldJTI)
-	if err != nil && isJWTInvalidated {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check token validity"})
-		return
-	}
-
-	user := models.User{
-		Username:  claims["username"].(string),
-		Email:     claims["email"].(string),
-		IPAddress: c.ClientIP(),
-		UserAgent: c.GetHeader("User-Agent"),
-	}
-
-	newAccessToken, _, err := utils.GenerateJWT(user, "access")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
-		return
-	}
-
-	newRefreshToken, newJTI, err := utils.GenerateJWT(user, "refresh")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
+		c.Error(err)
 		return
 	}
 
 	domain := os.Getenv("DOMAIN")
 	if domain == "" {
 		domain = "localhost"
-	}
-
-	if err := h.svc.InvalidateJWTTokens(oldJTI, newJTI); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to invalidate old tokens"})
-		return
 	}
 
 	c.SetCookie("access_token", newAccessToken, 7*24*3600, "/", domain, secure, false)

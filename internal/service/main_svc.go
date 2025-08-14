@@ -14,6 +14,7 @@ type Service interface {
 	CreateVerifyEmail(email string) error
 	VerifyEmail(id string, c *gin.Context) error
 	ResetPassword(tokenStr string, newPassword string) error
+	RefreshTokens(refreshToken, ip, userAgent string) (string, string, error)
 	InvalidateJWTTokens(oldJTI, newJTI string) error
 	IsTokenLogInvalidated(jti string) (bool, error)
 
