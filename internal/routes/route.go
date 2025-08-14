@@ -12,7 +12,7 @@ func RegisterRoutes(r *gin.Engine, mainHandler *handler.MainHandler) {
 	auth := api.Group("/auth")
 	{
 		provider := auth.Group("/:provider")
-		provider.Use(middleware.OAuthMiddleware)
+		provider.Use(middleware.OAuthMiddleware())
 		{
 			provider.GET("/", mainHandler.OAuthLogin)
 			provider.GET("/callback", mainHandler.OAuthCallback)
@@ -31,7 +31,7 @@ func RegisterRoutes(r *gin.Engine, mainHandler *handler.MainHandler) {
 	}
 
 	user := api.Group("/user")
-	user.Use(middleware.AuthMiddleware)
+	user.Use(middleware.AuthMiddleware())
 	{
 		user.GET("/me", mainHandler.GetCurrentUser)
 		user.GET("/:id", mainHandler.GetUserByID)
