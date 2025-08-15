@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/Jonathan0823/auth-go/internal/models"
@@ -11,6 +13,9 @@ func (r *repository) GetUserByID(id int) (*models.User, error) {
 	query := "SELECT id, username, email, updated_at, created_at FROM users WHERE id = $1"
 	err := r.db.QueryRow(query, id).Scan(&user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &user, nil
@@ -32,6 +37,9 @@ func (r *repository) GetUserByEmail(email string, includePassword bool) (*models
 		WHERE email = $1`, selectFields)
 	err := r.db.QueryRow(query, email).Scan(scanFields...)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &user, nil

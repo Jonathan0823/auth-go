@@ -23,7 +23,10 @@ func (s *service) Register(user models.User) error {
 	}
 
 	userFromDB, err := s.repo.GetUserByEmail(user.Email, false)
-	if userFromDB != nil && err == nil {
+	if err != nil {
+		return errors.InternalServerError("failed to get user by email", err)
+	}
+	if userFromDB != nil {
 		return errors.Conflict("email already exists", err)
 	}
 
@@ -41,12 +44,13 @@ func (s *service) Register(user models.User) error {
 
 func (s *service) Login(user models.User) (string, string, error) {
 	userFromDB, err := s.repo.GetUserByEmail(user.Email, true)
-	if err != nil && userFromDB == nil {
-		if goerror.Is(err, sql.ErrNoRows) {
-			return "", "", errors.NotFound("user not found", err)
-		}
+	if err != nil {
 		return "", "", errors.InternalServerError("failed to get user by email", err)
 	}
+	if userFromDB == nil {
+		return "", "", errors.NotFound("user not found", nil)
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(user.Password)); err != nil {
 		return "", "", errors.Unauthorized("invalid credentials", err)
 	}
@@ -81,11 +85,11 @@ func (s *service) Login(user models.User) (string, string, error) {
 
 func (s *service) CreateVerifyEmail(email string) error {
 	userFromDB, err := s.repo.GetUserByEmail(email, false)
-	if err != nil || userFromDB == nil {
-		if goerror.Is(err, sql.ErrNoRows) {
-			return errors.NotFound("user not found", err)
-		}
+	if err != nil {
 		return errors.InternalServerError("failed to get user by email", err)
+	}
+	if userFromDB == nil {
+		return errors.NotFound("user not found", nil)
 	}
 
 	verifyEmail := models.VerifyEmail{
@@ -132,11 +136,11 @@ func (s *service) VerifyEmail(id string, c *gin.Context) error {
 
 func (s *service) ForgotPassword(email string) error {
 	userFromDB, err := s.repo.GetUserByEmail(email, false)
-	if err != nil || userFromDB == nil {
-		if goerror.Is(err, sql.ErrNoRows) {
-			return errors.NotFound("user not found", err)
-		}
+	if err != nil {
 		return errors.InternalServerError("failed to get user by email", err)
+	}
+	if userFromDB == nil {
+		return errors.NotFound("user not found", nil)
 	}
 
 	data := models.ForgotPassword{
