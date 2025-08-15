@@ -66,6 +66,7 @@ func (s *service) Login(user models.User) (string, string, error) {
 	}
 
 	tokenLog := models.TokenLog{
+		ID:               uuid.New(),
 		UserID:           userFromDB.ID,
 		JTI:              jtiRefresh,
 		RefreshedFromJTI: nil,
