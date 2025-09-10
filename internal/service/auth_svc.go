@@ -2,6 +2,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	goerror "errors"
 	"fmt"
@@ -10,40 +11,58 @@ import (
 
 	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/internal/models"
+	"github.com/Jonathan0823/auth-go/internal/repository"
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (s *service) Register(user models.User) error {
+type AuthService interface {
+	Register(ctx context.Context, user models.User) error
+	Login(ctx context.Context, user models.User) (string, string, error)
+	ForgotPassword(ctx context.Context, email string) error
+	CreateVerifyEmail(ctx context.Context, email string) error
+	VerifyEmail(ctx context.Context, id string, c *gin.Context) error
+	ResetPassword(ctx context.Context, tokenStr string, newPassword string) error
+	RefreshTokens(ctx context.Context, refreshToken, ip, userAgent string) (string, string, error)
+	InvalidateJWTTokens(ctx context.Context, oldJTI, newJTI string) error
+	IsTokenLogInvalidated(ctx context.Context, jti string) (bool, error)
+}
+
+type authService struct {
+	repo repository.Repository
+}
+
+func NewAuthService(repo repository.Repository) AuthService {
+	return &authService{
+		repo: repo,
+	}
+}
+
+func (s *authService) Register(ctx context.Context, user models.User) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.InternalServerError("failed to hash password", err)
 	}
 
-	userFromDB, err := s.repo.GetUserByEmail(user.Email, false)
-	if err != nil {
-		return errors.InternalServerError("failed to get user by email", err)
-	}
-	if userFromDB != nil {
-		return errors.Conflict("email already exists", err)
-	}
-
 	user.Password = string(hashedPassword)
-	if err := s.repo.CreateUser(user); err != nil {
+	if err := s.repo.Users().CreateUser(ctx, user); err != nil {
+		if utils.IsPGUniqueViolation(err) {
+			return errors.Conflict("email already exists", err)
+		}
 		return errors.InternalServerError("failed to create user", err)
 	}
 
-	if err := s.CreateVerifyEmail(user.Email); err != nil {
+	if err := s.CreateVerifyEmail(ctx, user.Email); err != nil {
 		return errors.InternalServerError("failed to create verification email", err)
 	}
 
 	return nil
 }
 
-func (s *service) Login(user models.User) (string, string, error) {
-	userFromDB, err := s.repo.GetUserByEmail(user.Email, true)
+func (s *authService) Login(ctx context.Context, user models.User) (string, string, error) {
+	userFromDB, err := s.repo.Users().GetUserByEmail(ctx, user.Email, true)
 	if err != nil {
 		return "", "", errors.InternalServerError("failed to get user by email", err)
 	}
@@ -77,15 +96,15 @@ func (s *service) Login(user models.User) (string, string, error) {
 		UserAgent:        user.UserAgent,
 	}
 
-	if err := s.repo.CreateTokenLog(tokenLog); err != nil {
+	if err := s.repo.Auth().CreateTokenLog(ctx, tokenLog); err != nil {
 		return "", "", errors.InternalServerError("failed to create token log", err)
 	}
 
 	return accessToken, refreshToken, nil
 }
 
-func (s *service) CreateVerifyEmail(email string) error {
-	userFromDB, err := s.repo.GetUserByEmail(email, false)
+func (s *authService) CreateVerifyEmail(ctx context.Context, email string) error {
+	userFromDB, err := s.repo.Users().GetUserByEmail(ctx, email, false)
 	if err != nil {
 		return errors.InternalServerError("failed to get user by email", err)
 	}
@@ -100,7 +119,7 @@ func (s *service) CreateVerifyEmail(email string) error {
 		ExpiredAt: time.Now().Add(1 * time.Hour),
 	}
 
-	if err := s.repo.CreateVerifyEmail(verifyEmail); err != nil {
+	if err := s.repo.Auth().CreateVerifyEmail(ctx, verifyEmail); err != nil {
 		return errors.InternalServerError("failed to create verification email", err)
 	}
 
@@ -111,13 +130,13 @@ func (s *service) CreateVerifyEmail(email string) error {
 	return nil
 }
 
-func (s *service) VerifyEmail(id string, c *gin.Context) error {
+func (s *authService) VerifyEmail(ctx context.Context, id string, c *gin.Context) error {
 	_, err := uuid.Parse(id)
 	if err != nil {
 		return errors.BadRequest("invalid token", err)
 	}
 
-	verifyEmail, err := s.repo.GetVerifyEmailByID(id)
+	verifyEmail, err := s.repo.Auth().GetVerifyEmailByID(ctx, id)
 	if err != nil || verifyEmail.ID == uuid.Nil {
 		if goerror.Is(err, sql.ErrNoRows) {
 			return errors.NotFound("verification token not found", err)
@@ -129,14 +148,14 @@ func (s *service) VerifyEmail(id string, c *gin.Context) error {
 		return errors.BadRequest("token expired", err)
 	}
 
-	if err := s.repo.VerifyEmail(id); err != nil {
+	if err := s.repo.Auth().VerifyEmail(ctx, id); err != nil {
 		return errors.InternalServerError("failed to verify email", err)
 	}
 	return nil
 }
 
-func (s *service) ForgotPassword(email string) error {
-	userFromDB, err := s.repo.GetUserByEmail(email, false)
+func (s *authService) ForgotPassword(ctx context.Context, email string) error {
+	userFromDB, err := s.repo.Users().GetUserByEmail(ctx, email, false)
 	if err != nil {
 		return errors.InternalServerError("failed to get user by email", err)
 	}
@@ -151,7 +170,7 @@ func (s *service) ForgotPassword(email string) error {
 		ExpiredAt: time.Now().Add(15 * time.Minute),
 	}
 
-	if err := s.repo.CreateForgotPasswordEmail(data); err != nil {
+	if err := s.repo.Auth().CreateForgotPasswordEmail(ctx, data); err != nil {
 		return errors.InternalServerError("failed to create forgot password record", err)
 	}
 
@@ -166,12 +185,12 @@ func (s *service) ForgotPassword(email string) error {
 	return nil
 }
 
-func (s *service) ResetPassword(id string, newPassword string) error {
+func (s *authService) ResetPassword(ctx context.Context, id string, newPassword string) error {
 	if _, err := uuid.Parse(id); err != nil {
 		return errors.BadRequest("invalid token", err)
 	}
 
-	forgotPassword, err := s.repo.GetForgotPasswordByID(id)
+	forgotPassword, err := s.repo.Auth().GetForgotPasswordByID(ctx, id)
 	if err != nil || forgotPassword.ID == uuid.Nil {
 		if goerror.Is(err, sql.ErrNoRows) {
 			return errors.NotFound("forgot password token not found", err)
@@ -188,24 +207,24 @@ func (s *service) ResetPassword(id string, newPassword string) error {
 		return errors.InternalServerError("failed to hash new password", err)
 	}
 
-	if err = s.repo.UpdateUserPassword(forgotPassword.UserID, string(hashedNewPassword)); err != nil {
+	if err = s.repo.Users().UpdateUserPassword(ctx, forgotPassword.UserID, string(hashedNewPassword)); err != nil {
 		return errors.InternalServerError("failed to update user password", err)
 	}
 
-	if err := s.repo.DeleteForgotPasswordByID(id); err != nil {
+	if err := s.repo.Auth().DeleteForgotPasswordByID(ctx, id); err != nil {
 		return errors.InternalServerError("failed to delete forgot password record", err)
 	}
 	return nil
 }
 
-func (s *service) RefreshTokens(refreshToken, ip, userAgent string) (string, string, error) {
+func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userAgent string) (string, string, error) {
 	claims, err := utils.ValidateJWT(refreshToken, "refresh")
 	if err != nil {
 		return "", "", errors.Unauthorized("invalid refresh token", err)
 	}
 
 	oldJTI := claims["jti"].(string)
-	isJWTInvalidated, err := s.IsTokenLogInvalidated(oldJTI)
+	isJWTInvalidated, err := s.IsTokenLogInvalidated(ctx, oldJTI)
 	if err != nil && isJWTInvalidated {
 		return "", "", errors.Unauthorized("invalidated refresh token", err)
 	}
@@ -227,28 +246,28 @@ func (s *service) RefreshTokens(refreshToken, ip, userAgent string) (string, str
 		return "", "", errors.InternalServerError("failed to generate refresh token", err)
 	}
 
-	if err := s.InvalidateJWTTokens(oldJTI, newJTI); err != nil {
+	if err := s.InvalidateJWTTokens(ctx, oldJTI, newJTI); err != nil {
 		return "", "", errors.InternalServerError("failed to invalidate old tokens", err)
 	}
 
 	return newAccessToken, newRefreshToken, nil
 }
 
-func (s *service) InvalidateJWTTokens(oldJTI, newJTI string) error {
+func (s *authService) InvalidateJWTTokens(ctx context.Context, oldJTI, newJTI string) error {
 	if oldJTI == "" || newJTI == "" {
 		return errors.BadRequest("oldJTI and newJTI cannot be empty", nil)
 	}
-	if err := s.repo.InvalidateTokenLog(oldJTI, newJTI); err != nil {
+	if err := s.repo.Auth().InvalidateTokenLog(ctx, oldJTI, newJTI); err != nil {
 		return errors.InternalServerError("failed to invalidate token log", err)
 	}
 	return nil
 }
 
-func (s *service) IsTokenLogInvalidated(jti string) (bool, error) {
+func (s *authService) IsTokenLogInvalidated(ctx context.Context, jti string) (bool, error) {
 	if jti == "" {
 		return false, errors.BadRequest("jti cannot be empty", nil)
 	}
-	invalidated, err := s.repo.IsTokenLogInvalidated(jti)
+	invalidated, err := s.repo.Auth().IsTokenLogInvalidated(ctx, jti)
 	if err != nil {
 		return false, errors.InternalServerError("failed to check if token log is invalidated", err)
 	}
