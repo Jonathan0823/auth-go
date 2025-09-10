@@ -5,6 +5,7 @@ import (
 
 	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/internal/models"
+	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/markbates/goth/gothic"
 )
@@ -14,6 +15,8 @@ func (h *MainHandler) OAuthLogin(c *gin.Context) {
 }
 
 func (h *MainHandler) OAuthCallback(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	user, err := gothic.CompleteUserAuth(c.Writer, c.Request)
 	if err != nil {
 		c.Error(errors.Unauthorized("OAuth authentication failed", err))
@@ -28,7 +31,7 @@ func (h *MainHandler) OAuthCallback(c *gin.Context) {
 		AvatarURL: user.AvatarURL,
 	}
 
-	userData, err := h.svc.OAuthLogin(data)
+	userData, err := h.svc.OAuth().OAuthLogin(ctx, data)
 	if err != nil {
 		c.Error(err)
 		return
