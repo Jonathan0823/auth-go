@@ -1,23 +1,37 @@
 package service
 
 import (
+	"context"
+
 	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/internal/models"
+	"github.com/Jonathan0823/auth-go/internal/repository"
+	"github.com/Jonathan0823/auth-go/utils"
 )
 
-func (s *service) OAuthLogin(user models.User) (*models.User, error) {
-	userData, err := s.repo.GetUserByEmail(user.Email, false)
-	if err != nil {
-		return nil, errors.InternalServerError("failed to get user by email", err)
+type OAuthService interface {
+	OAuthLogin(ctx context.Context, user models.User) (*models.User, error)
+}
+
+type oAuthService struct {
+	repo repository.Repository
+}
+
+func NewOAuthService(repo repository.Repository) OAuthService {
+	return &oAuthService{
+		repo: repo,
 	}
-	if userData == nil {
-		if err = s.repo.CreateUser(user); err != nil {
+}
+
+func (s *oAuthService) OAuthLogin(ctx context.Context, user models.User) (*models.User, error) {
+	if err := s.repo.Users().CreateUser(ctx, user); err != nil {
+		if !utils.IsPGUniqueViolation(err) {
 			return nil, errors.InternalServerError("failed to create user", err)
 		}
-		userData, err = s.repo.GetUserByEmail(user.Email, false)
-		if err != nil || userData == nil {
-			return nil, errors.InternalServerError("failed to retrieve user after creation", err)
-		}
+	}
+	userData, err := s.repo.Users().GetUserByEmail(ctx, user.Email, false)
+	if err != nil || userData == nil {
+		return nil, errors.InternalServerError("failed to retrieve user after creation", err)
 	}
 
 	return userData, nil
