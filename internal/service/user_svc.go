@@ -1,14 +1,35 @@
 package service
 
 import (
+	"context"
+
 	"github.com/Jonathan0823/auth-go/internal/errors"
 	"github.com/Jonathan0823/auth-go/internal/models"
+	"github.com/Jonathan0823/auth-go/internal/repository"
 	"github.com/Jonathan0823/auth-go/utils"
 	"github.com/gin-gonic/gin"
 )
 
-func (s *service) GetUserByID(id int) (*models.User, error) {
-	data, err := s.repo.GetUserByID(id)
+type UserService interface {
+	GetUserByID(ctx context.Context, id int) (*models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetAllUsers(ctx context.Context) ([]*models.User, error)
+	UpdateUser(ctx context.Context, user models.UpdateUserRequest, c *gin.Context) error
+	DeleteUser(ctx context.Context, id int, c *gin.Context) error
+}
+
+type userService struct {
+	repo repository.Repository
+}
+
+func NewUserService(repo repository.Repository) UserService {
+	return &userService{
+		repo: repo,
+	}
+}
+
+func (s *userService) GetUserByID(ctx context.Context, id int) (*models.User, error) {
+	data, err := s.repo.Users().GetUserByID(ctx, id)
 	if err != nil {
 		return nil, errors.InternalServerError("failed to get user by id", err)
 	}
@@ -18,8 +39,8 @@ func (s *service) GetUserByID(id int) (*models.User, error) {
 	return data, nil
 }
 
-func (s *service) GetUserByEmail(email string) (*models.User, error) {
-	data, err := s.repo.GetUserByEmail(email, false)
+func (s *userService) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	data, err := s.repo.Users().GetUserByEmail(ctx, email, false)
 	if err != nil {
 		return nil, errors.InternalServerError("failed to get user by email", err)
 	}
@@ -29,15 +50,15 @@ func (s *service) GetUserByEmail(email string) (*models.User, error) {
 	return data, nil
 }
 
-func (s *service) GetAllUsers() ([]*models.User, error) {
-	data, err := s.repo.GetAllUsers()
+func (s *userService) GetAllUsers(ctx context.Context) ([]*models.User, error) {
+	data, err := s.repo.Users().GetAllUsers(ctx)
 	if err != nil {
 		return nil, errors.InternalServerError("failed to get all users", err)
 	}
 	return data, nil
 }
 
-func (s *service) UpdateUser(user models.UpdateUserRequest, c *gin.Context) error {
+func (s *userService) UpdateUser(ctx context.Context, user models.UpdateUserRequest, c *gin.Context) error {
 	currentUser, err := utils.GetUser(c)
 	if err != nil {
 		return errors.Unauthorized("user is not found", err)
@@ -47,13 +68,13 @@ func (s *service) UpdateUser(user models.UpdateUserRequest, c *gin.Context) erro
 		return errors.Forbidden("you are not authorized to update this user", nil)
 	}
 
-	if err := s.repo.UpdateUser(user); err != nil {
+	if err := s.repo.Users().UpdateUser(ctx, user); err != nil {
 		return errors.InternalServerError("failed to update user", err)
 	}
 	return nil
 }
 
-func (s *service) DeleteUser(id int, c *gin.Context) error {
+func (s *userService) DeleteUser(ctx context.Context, id int, c *gin.Context) error {
 	currentUser, err := utils.GetUser(c)
 	if err != nil {
 		return errors.Unauthorized("user is not found", err)
@@ -63,7 +84,7 @@ func (s *service) DeleteUser(id int, c *gin.Context) error {
 		return errors.Forbidden("you are not authorized to delete this user", nil)
 	}
 
-	if err := s.repo.DeleteUser(id); err != nil {
+	if err := s.repo.Users().DeleteUser(ctx, id); err != nil {
 		return errors.InternalServerError("failed to delete user", err)
 	}
 	return nil
