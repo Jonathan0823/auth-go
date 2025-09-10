@@ -29,8 +29,8 @@ func NewUserRepository(dbtx DBTX) UserRepository {
 
 func (r *userRepository) GetUserByID(ctx context.Context, id int) (*models.User, error) {
 	var user models.User
-	query := "SELECT id, username, email, updated_at, created_at FROM users WHERE id = $1"
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
+	query := "SELECT id, username, email, is_verified, updated_at, created_at FROM users WHERE id = $1"
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Username, &user.Email, &user.IsVerified, &user.UpdatedAt, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
