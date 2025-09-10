@@ -27,7 +27,7 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Logger())
 	repo := repository.NewRepository(db)
-	svc := service.NewService(repo)
+	svc := service.NewService(*repo)
 	mainHandler := handler.NewMainHandler(svc)
 
 	routes.RegisterRoutes(r, mainHandler)
