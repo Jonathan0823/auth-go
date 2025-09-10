@@ -11,13 +11,15 @@ import (
 )
 
 func (h *MainHandler) GetUserByID(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	id, _ := strconv.Atoi(c.Param("id"))
 	if id == 0 {
 		c.Error(errors.BadRequest("Invalid user ID", nil))
 		return
 	}
 
-	user, err := h.svc.GetUserByID(id)
+	user, err := h.svc.User().GetUserByID(ctx, id)
 	if err != nil {
 		c.Error(err)
 		return
@@ -27,7 +29,9 @@ func (h *MainHandler) GetUserByID(c *gin.Context) {
 }
 
 func (h *MainHandler) GetAllUsers(c *gin.Context) {
-	users, err := h.svc.GetAllUsers()
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
+	users, err := h.svc.User().GetAllUsers(ctx)
 	if err != nil {
 		c.Error(err)
 		return
@@ -41,9 +45,15 @@ func (h *MainHandler) GetAllUsers(c *gin.Context) {
 }
 
 func (h *MainHandler) GetUserByEmail(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	email := c.Query("email")
+	if email == "" {
+		c.Error(errors.BadRequest("Email query parameter is required", nil))
+		return
+	}
 
-	user, err := h.svc.GetUserByEmail(email)
+	user, err := h.svc.User().GetUserByEmail(ctx, email)
 	if err != nil {
 		c.Error(err)
 		return
@@ -53,12 +63,14 @@ func (h *MainHandler) GetUserByEmail(c *gin.Context) {
 }
 
 func (h *MainHandler) UpdateUser(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	var user models.UpdateUserRequest
 	if isValid := utils.BindJSONWithValidation(c, &user); !isValid {
 		return
 	}
 
-	if err := h.svc.UpdateUser(user, c); err != nil {
+	if err := h.svc.User().UpdateUser(ctx, user, c); err != nil {
 		c.Error(err)
 		return
 	}
@@ -67,13 +79,15 @@ func (h *MainHandler) UpdateUser(c *gin.Context) {
 }
 
 func (h *MainHandler) DeleteUser(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	id, _ := strconv.Atoi(c.Param("id"))
 	if id == 0 {
 		c.Error(errors.BadRequest("Invalid user ID", nil))
 		return
 	}
 
-	if err := h.svc.DeleteUser(id, c); err != nil {
+	if err := h.svc.User().DeleteUser(ctx, id, c); err != nil {
 		c.Error(err)
 		return
 	}
@@ -82,13 +96,15 @@ func (h *MainHandler) DeleteUser(c *gin.Context) {
 }
 
 func (h *MainHandler) GetCurrentUser(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	user, err := utils.GetUser(c)
 	if err != nil {
 		c.Error(errors.Unauthorized("User is not authenticated", err))
 		return
 	}
 
-	data, err := h.svc.GetUserByID(user.ID)
+	data, err := h.svc.User().GetUserByID(ctx, user.ID)
 	if err != nil {
 		c.Error(err)
 		return
