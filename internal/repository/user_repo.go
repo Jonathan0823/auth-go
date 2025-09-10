@@ -43,8 +43,8 @@ func (r *userRepository) GetUserByID(ctx context.Context, id int) (*models.User,
 func (r *userRepository) GetUserByEmail(ctx context.Context, email string, includePassword bool) (*models.User, error) {
 	var user models.User
 	var scanFields []any
-	scanFields = append(scanFields, &user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
-	selectFields := "id, username, email, updated_at, created_at"
+	scanFields = append(scanFields, &user.ID, &user.Username, &user.Email, &user.IsVerified, &user.UpdatedAt, &user.CreatedAt)
+	selectFields := "id, username, email, is_verified, updated_at, created_at"
 	if includePassword {
 		selectFields += ", password"
 		scanFields = append(scanFields, &user.Password)
@@ -75,7 +75,7 @@ func (r *userRepository) CreateUser(ctx context.Context, user models.User) error
 
 func (r *userRepository) GetAllUsers(ctx context.Context) ([]*models.User, error) {
 	var users []*models.User
-	query := "SELECT id, username, email, updated_at, created_at FROM users"
+	query := "SELECT id, username, email, is_verified, updated_at, created_at FROM users"
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query users: %v", err)
@@ -84,7 +84,7 @@ func (r *userRepository) GetAllUsers(ctx context.Context) ([]*models.User, error
 
 	for rows.Next() {
 		user := new(models.User)
-		err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.UpdatedAt, &user.CreatedAt)
+		err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.IsVerified, &user.UpdatedAt, &user.CreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user: %v", err)
 		}
