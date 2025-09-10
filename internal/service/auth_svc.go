@@ -190,31 +190,33 @@ func (s *authService) ResetPassword(ctx context.Context, id string, newPassword 
 		return errors.BadRequest("invalid token", err)
 	}
 
-	forgotPassword, err := s.repo.Auth().GetForgotPasswordByID(ctx, id)
-	if err != nil || forgotPassword.ID == uuid.Nil {
-		if goerror.Is(err, sql.ErrNoRows) {
-			return errors.NotFound("forgot password token not found", err)
-		}
-		return errors.InternalServerError("internal server error", err)
-	}
-
-	if time.Now().After(forgotPassword.ExpiredAt) {
-		return errors.BadRequest("token expired", nil)
-	}
-
 	hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.InternalServerError("failed to hash new password", err)
 	}
 
-	if err = s.repo.Users().UpdateUserPassword(ctx, forgotPassword.UserID, string(hashedNewPassword)); err != nil {
-		return errors.InternalServerError("failed to update user password", err)
-	}
+	return s.repo.WithTx(ctx, func(u repository.UOW) error {
+		forgotPassword, err := u.Auth().GetForgotPasswordByID(ctx, id)
+		if err != nil || forgotPassword.ID == uuid.Nil {
+			if goerror.Is(err, sql.ErrNoRows) {
+				return errors.NotFound("forgot password token not found", err)
+			}
+			return errors.InternalServerError("internal server error", err)
+		}
 
-	if err := s.repo.Auth().DeleteForgotPasswordByID(ctx, id); err != nil {
-		return errors.InternalServerError("failed to delete forgot password record", err)
-	}
-	return nil
+		if time.Now().After(forgotPassword.ExpiredAt) {
+			return errors.BadRequest("token expired", nil)
+		}
+
+		if err := u.Auth().DeleteForgotPasswordByID(ctx, id); err != nil {
+			return errors.InternalServerError("failed to delete forgot password record", err)
+		}
+
+		if err = u.Users().UpdateUserPassword(ctx, forgotPassword.UserID, string(hashedNewPassword)); err != nil {
+			return errors.InternalServerError("failed to update user password", err)
+		}
+		return nil
+	})
 }
 
 func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userAgent string) (string, string, error) {
