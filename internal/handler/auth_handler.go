@@ -14,6 +14,8 @@ import (
 var secure = os.Getenv("ENVIRONMENT") == "production"
 
 func (h *MainHandler) Register(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	var req models.LoginRegisterRequest
 	if isValid := utils.BindJSONWithValidation(c, &req); !isValid {
 		return
@@ -23,7 +25,7 @@ func (h *MainHandler) Register(c *gin.Context) {
 	user.Email = req.Email
 	user.Password = req.Password
 
-	if err := h.svc.Register(user); err != nil {
+	if err := h.svc.Auth().Register(ctx, user); err != nil {
 		c.Error(err)
 		return
 	}
@@ -32,6 +34,8 @@ func (h *MainHandler) Register(c *gin.Context) {
 }
 
 func (h *MainHandler) Login(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	var req models.LoginRegisterRequest
 	if isValid := utils.BindJSONWithValidation(c, &req); !isValid {
 		return
@@ -43,7 +47,7 @@ func (h *MainHandler) Login(c *gin.Context) {
 	user.IPAddress = c.ClientIP()
 	user.UserAgent = c.GetHeader("User-Agent")
 
-	accessToken, refreshToken, err := h.svc.Login(user)
+	accessToken, refreshToken, err := h.svc.Auth().Login(ctx, user)
 	if err != nil {
 		c.Error(err)
 		return
@@ -61,6 +65,8 @@ func (h *MainHandler) Login(c *gin.Context) {
 }
 
 func (h *MainHandler) Logout(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
 		c.Error(errors.Unauthorized("Refresh token not found", err))
@@ -73,7 +79,7 @@ func (h *MainHandler) Logout(c *gin.Context) {
 	}
 
 	oldJTI := claims["jti"].(string)
-	if err := h.svc.InvalidateJWTTokens(oldJTI, ""); err != nil {
+	if err := h.svc.Auth().InvalidateJWTTokens(ctx, oldJTI, ""); err != nil {
 		c.Error(err)
 		return
 	}
@@ -85,13 +91,15 @@ func (h *MainHandler) Logout(c *gin.Context) {
 }
 
 func (h *MainHandler) Refresh(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
 		c.Error(errors.Unauthorized("Refresh token not found", err))
 		return
 	}
 
-	newAccessToken, newRefreshToken, err := h.svc.RefreshTokens(refreshToken, c.ClientIP(), c.GetHeader("User-Agent"))
+	newAccessToken, newRefreshToken, err := h.svc.Auth().RefreshTokens(ctx, refreshToken, c.ClientIP(), c.GetHeader("User-Agent"))
 	if err != nil {
 		c.Error(err)
 		return
@@ -108,9 +116,11 @@ func (h *MainHandler) Refresh(c *gin.Context) {
 }
 
 func (h *MainHandler) VerifyEmail(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	id := c.Query("id")
 
-	if err := h.svc.VerifyEmail(id, c); err != nil {
+	if err := h.svc.Auth().VerifyEmail(ctx, id, c); err != nil {
 		c.Error(err)
 		return
 	}
@@ -119,13 +129,15 @@ func (h *MainHandler) VerifyEmail(c *gin.Context) {
 }
 
 func (h *MainHandler) ResendVerifyEmail(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	email := c.Query("email")
 	if email == "" {
 		c.Error(errors.BadRequest("Email is required", nil))
 		return
 	}
 
-	if err := h.svc.CreateVerifyEmail(email); err != nil {
+	if err := h.svc.Auth().CreateVerifyEmail(ctx, email); err != nil {
 		c.Error(err)
 		return
 	}
@@ -134,6 +146,8 @@ func (h *MainHandler) ResendVerifyEmail(c *gin.Context) {
 }
 
 func (h *MainHandler) ForgotPassword(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	type Request struct {
 		Email string `json:"email" validate:"required,email"`
 	}
@@ -142,7 +156,7 @@ func (h *MainHandler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.ForgotPassword(user.Email); err != nil {
+	if err := h.svc.Auth().ForgotPassword(ctx, user.Email); err != nil {
 		c.Error(err)
 		return
 	}
@@ -151,12 +165,14 @@ func (h *MainHandler) ForgotPassword(c *gin.Context) {
 }
 
 func (h *MainHandler) ResetPassword(c *gin.Context) {
+	ctx, cancel := utils.CtxWithTimeOut(c)
+	defer cancel()
 	var req models.ResetPasswordRequest
 	if isValid := utils.BindJSONWithValidation(c, &req); !isValid {
 		return
 	}
 
-	if err := h.svc.ResetPassword(req.ID, req.Password); err != nil {
+	if err := h.svc.Auth().ResetPassword(ctx, req.ID, req.Password); err != nil {
 		c.Error(err)
 	}
 
