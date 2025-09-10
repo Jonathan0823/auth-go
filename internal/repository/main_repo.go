@@ -6,31 +6,45 @@ import (
 	"database/sql"
 )
 
-type Repository struct{ db *sql.DB }
+type Repository interface {
+	Begin(ctx context.Context, opts *sql.TxOptions) (UOW, error)
+	Auth() AuthRepository
+	Users() UserRepository
+	WithTx(ctx context.Context, fn func(u UOW) error) error
+}
 
-func NewRepository(db *sql.DB) *Repository { return &Repository{db: db} }
+type UOW interface {
+	Users() UserRepository
+	Auth() AuthRepository
+	Commit() error
+	Rollback() error
+}
 
-func (r *Repository) Auth() AuthRepository  { return NewAuthRepository(r.db) }
-func (r *Repository) Users() UserRepository { return NewUserRepository(r.db) }
-
-type UOW struct {
+type uow struct {
 	tx *sql.Tx
 }
 
-func (r *Repository) Begin(ctx context.Context, opts *sql.TxOptions) (*UOW, error) {
+type repository struct{ db *sql.DB }
+
+func NewRepository(db *sql.DB) Repository { return &repository{db: db} }
+
+func (r *repository) Auth() AuthRepository  { return NewAuthRepository(r.db) }
+func (r *repository) Users() UserRepository { return NewUserRepository(r.db) }
+
+func (r *repository) Begin(ctx context.Context, opts *sql.TxOptions) (UOW, error) {
 	tx, err := r.db.BeginTx(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
-	return &UOW{tx: tx}, nil
+	return &uow{tx: tx}, nil
 }
-func (u *UOW) Commit() error   { return u.tx.Commit() }
-func (u *UOW) Rollback() error { return u.tx.Rollback() }
 
-func (u *UOW) Users() UserRepository { return NewUserRepository(u.tx) }
-func (u *UOW) Auth() AuthRepository  { return NewAuthRepository(u.tx) }
+func (u *uow) Users() UserRepository { return NewUserRepository(u.tx) }
+func (u *uow) Auth() AuthRepository  { return NewAuthRepository(u.tx) }
+func (u *uow) Commit() error         { return u.tx.Commit() }
+func (u *uow) Rollback() error       { return u.tx.Rollback() }
 
-func (r *Repository) WithTx(ctx context.Context, fn func(u *UOW) error) error {
+func (r *repository) WithTx(ctx context.Context, fn func(u UOW) error) error {
 	u, err := r.Begin(ctx, nil)
 	if err != nil {
 		return err
