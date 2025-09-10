@@ -4,13 +4,30 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/repository"
 )
 
-type service struct {
-	oauth OAuthService
+type Service interface {
+	User() UserService
+	OAuth() OAuthService
+	Auth() AuthService
 }
 
-func NewService(repo repository.Repository) *service {
-	oauthSvc := NewOAuthService(repo)
+type service struct {
+	repo repository.Repository
+}
+
+func NewService(repo repository.Repository) Service {
 	return &service{
-		oauth: oauthSvc,
+		repo: repo,
 	}
+}
+
+func (s *service) User() UserService {
+	return NewUserService(s.repo)
+}
+
+func (s *service) OAuth() OAuthService {
+	return NewOAuthService(s.repo)
+}
+
+func (s *service) Auth() AuthService {
+	return NewAuthService(s.repo)
 }
