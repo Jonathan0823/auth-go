@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -78,9 +79,12 @@ func (r *authRepository) GetForgotPasswordByID(ctx context.Context, id string) (
 }
 
 func (r *authRepository) DeleteForgotPasswordByID(ctx context.Context, id string) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM forgot_password_emails WHERE id = $1", id)
+	res, err := r.db.ExecContext(ctx, "DELETE FROM forgot_password_emails WHERE id = $1", id)
 	if err != nil {
 		return err
+	}
+	if rowsAffected, _ := res.RowsAffected(); rowsAffected == 0 {
+		return sql.ErrNoRows
 	}
 	return nil
 }
