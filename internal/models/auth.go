@@ -7,6 +7,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type LoginRegisterRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8,max=100"`
+}
+
 type VerifyEmail struct {
 	ID        uuid.UUID `json:"id"`
 	UserID    int       `json:"user_id"`

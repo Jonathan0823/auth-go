@@ -14,10 +14,14 @@ import (
 var secure = os.Getenv("ENVIRONMENT") == "production"
 
 func (h *MainHandler) Register(c *gin.Context) {
-	var user models.User
-	if isValid := utils.BindJSONWithValidation(c, &user); !isValid {
+	var req models.LoginRegisterRequest
+	if isValid := utils.BindJSONWithValidation(c, &req); !isValid {
 		return
 	}
+
+	var user models.User
+	user.Email = req.Email
+	user.Password = req.Password
 
 	if err := h.svc.Register(user); err != nil {
 		c.Error(err)
@@ -28,11 +32,14 @@ func (h *MainHandler) Register(c *gin.Context) {
 }
 
 func (h *MainHandler) Login(c *gin.Context) {
-	var user models.User
-	if isValid := utils.BindJSONWithValidation(c, &user); !isValid {
+	var req models.LoginRegisterRequest
+	if isValid := utils.BindJSONWithValidation(c, &req); !isValid {
 		return
 	}
 
+	var user models.User
+	user.Email = req.Email
+	user.Password = req.Password
 	user.IPAddress = c.ClientIP()
 	user.UserAgent = c.GetHeader("User-Agent")
 
