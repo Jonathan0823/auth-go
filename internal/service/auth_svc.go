@@ -13,7 +13,6 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/models"
 	"github.com/Jonathan0823/auth-go/internal/repository"
 	"github.com/Jonathan0823/auth-go/utils"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,7 +22,7 @@ type AuthService interface {
 	Login(ctx context.Context, user models.User) (string, string, error)
 	ForgotPassword(ctx context.Context, email string) error
 	CreateVerifyEmail(ctx context.Context, email string) error
-	VerifyEmail(ctx context.Context, id string, c *gin.Context) error
+	VerifyEmail(ctx context.Context, id string) error
 	ResetPassword(ctx context.Context, tokenStr string, newPassword string) error
 	RefreshTokens(ctx context.Context, refreshToken, ip, userAgent string) (string, string, error)
 	InvalidateJWTTokens(ctx context.Context, oldJTI, newJTI string) error
@@ -130,7 +129,7 @@ func (s *authService) CreateVerifyEmail(ctx context.Context, email string) error
 	return nil
 }
 
-func (s *authService) VerifyEmail(ctx context.Context, id string, c *gin.Context) error {
+func (s *authService) VerifyEmail(ctx context.Context, id string) error {
 	_, err := uuid.Parse(id)
 	if err != nil {
 		return errors.BadRequest("invalid token", err)

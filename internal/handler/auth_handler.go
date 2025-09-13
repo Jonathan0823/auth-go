@@ -120,7 +120,7 @@ func (h *MainHandler) VerifyEmail(c *gin.Context) {
 	defer cancel()
 	id := c.Query("id")
 
-	if err := h.svc.Auth().VerifyEmail(ctx, id, c); err != nil {
+	if err := h.svc.Auth().VerifyEmail(ctx, id); err != nil {
 		c.Error(err)
 		return
 	}
