@@ -1,0 +1,13 @@
+.git
+.gitignore
+node_modules
+dist
+build
+.tmp
+*.log
+.env
+**/*.test.*
+coverage
+.vscode
+.idea
+.env.prod
