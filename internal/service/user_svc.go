@@ -15,7 +15,7 @@ type UserService interface {
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetAllUsers(ctx context.Context) ([]*models.User, error)
 	UpdateUser(ctx context.Context, user models.UpdateUserRequest, c *gin.Context) error
-	DeleteUser(ctx context.Context, id int, c *gin.Context) error
+	DeleteUser(ctx context.Context, id int) error
 }
 
 type userService struct {
@@ -74,16 +74,7 @@ func (s *userService) UpdateUser(ctx context.Context, user models.UpdateUserRequ
 	return nil
 }
 
-func (s *userService) DeleteUser(ctx context.Context, id int, c *gin.Context) error {
-	currentUser, err := utils.GetUser(c)
-	if err != nil {
-		return errors.Unauthorized("user is not found", err)
-	}
-
-	if currentUser.ID != id {
-		return errors.Forbidden("you are not authorized to delete this user", nil)
-	}
-
+func (s *userService) DeleteUser(ctx context.Context, id int) error {
 	if err := s.repo.Users().DeleteUser(ctx, id); err != nil {
 		return errors.InternalServerError("failed to delete user", err)
 	}

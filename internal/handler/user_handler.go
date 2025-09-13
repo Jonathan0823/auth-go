@@ -87,7 +87,17 @@ func (h *MainHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.User().DeleteUser(ctx, id, c); err != nil {
+	currentUser, err := utils.GetUser(c)
+	if err != nil {
+		c.Error(errors.Unauthorized("User is not authenticated", err))
+		return
+	}
+	if currentUser.ID != id {
+		c.Error(errors.Forbidden("You are not authorized to delete this user", nil))
+		return
+	}
+
+	if err := h.svc.User().DeleteUser(ctx, id); err != nil {
 		c.Error(err)
 		return
 	}
