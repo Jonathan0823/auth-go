@@ -1,0 +1,13 @@
+services:
+  auth-go:
+    image: auth-go:tidy
+    container_name: auth-go
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.prod
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
