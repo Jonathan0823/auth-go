@@ -8,6 +8,9 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine, mainHandler *handler.MainHandler) {
+	r.RedirectTrailingSlash = false
+	r.RemoveExtraSlash = true
+
 	api := r.Group("/api")
 	api.Use(middleware.ErrorHandler())
 	auth := api.Group("/auth")
