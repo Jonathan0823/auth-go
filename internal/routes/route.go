@@ -8,19 +8,10 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine, mainHandler *handler.MainHandler) {
-	r.RedirectTrailingSlash = false
-	r.RemoveExtraSlash = true
-
 	api := r.Group("/api")
 	api.Use(middleware.ErrorHandler())
 	auth := api.Group("/auth")
 	{
-		provider := auth.Group("/:provider")
-		provider.Use(middleware.OAuthMiddleware())
-		{
-			provider.GET("/", mainHandler.OAuthLogin)
-			provider.GET("/callback", mainHandler.OAuthCallback)
-		}
 		auth.POST("/register", mainHandler.Register)
 		auth.POST("/login", mainHandler.Login)
 		auth.POST("/logout", mainHandler.Logout)
@@ -31,6 +22,15 @@ func RegisterRoutes(r *gin.Engine, mainHandler *handler.MainHandler) {
 		{
 			verify.GET("/email", mainHandler.VerifyEmail)
 			verify.POST("/email/resend", mainHandler.ResendVerifyEmail)
+		}
+	}
+	oauth := api.Group("/oauth")
+	{
+		provider := oauth.Group("/:provider")
+		provider.Use(middleware.OAuthMiddleware())
+		{
+			provider.GET("/", mainHandler.OAuthLogin)
+			provider.GET("/callback", mainHandler.OAuthCallback)
 		}
 	}
 
