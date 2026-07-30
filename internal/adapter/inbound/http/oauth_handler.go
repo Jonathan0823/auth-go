@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +19,7 @@ func (h *Handler) OAuthCallback(c *gin.Context) {
 	defer cancel()
 	gothUser, err := gothic.CompleteUserAuth(c.Writer, c.Request)
 	if err != nil {
-		c.Error(domain.Unauthorized("OAuth authentication failed", err))
+		c.Error(fmt.Errorf("oauth authentication failed: %w", domain.ErrUnauthenticated))
 		return
 	}
 

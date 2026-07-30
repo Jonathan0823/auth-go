@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -14,7 +15,7 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 	defer cancel()
 	id, _ := strconv.Atoi(c.Param("id"))
 	if id == 0 {
-		c.Error(domain.BadRequest("Invalid user ID", nil))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 	user, err := h.Svc.User.GetByID(ctx, id)
@@ -44,7 +45,7 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 	defer cancel()
 	email := c.Query("email")
 	if email == "" {
-		c.Error(domain.BadRequest("Email query parameter is required", nil))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email query parameter is required"})
 		return
 	}
 	user, err := h.Svc.User.GetByEmail(ctx, email)
@@ -64,7 +65,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	}
 	currentUser, err := GetUser(c)
 	if err != nil {
-		c.Error(domain.Unauthorized("User is not authenticated", err))
+		c.Error(fmt.Errorf("user is not authenticated: %w", domain.ErrUnauthenticated))
 		return
 	}
 	if err := h.Svc.User.Update(ctx, currentUser.ID, req); err != nil {
@@ -79,12 +80,12 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	defer cancel()
 	id, _ := strconv.Atoi(c.Param("id"))
 	if id == 0 {
-		c.Error(domain.BadRequest("Invalid user ID", nil))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 	currentUser, err := GetUser(c)
 	if err != nil {
-		c.Error(domain.Unauthorized("User is not authenticated", err))
+		c.Error(fmt.Errorf("user is not authenticated: %w", domain.ErrUnauthenticated))
 		return
 	}
 	if err := h.Svc.User.Delete(ctx, id, currentUser.ID); err != nil {
@@ -99,7 +100,7 @@ func (h *Handler) GetCurrentUser(c *gin.Context) {
 	defer cancel()
 	user, err := GetUser(c)
 	if err != nil {
-		c.Error(domain.Unauthorized("User is not authenticated", err))
+		c.Error(fmt.Errorf("user is not authenticated: %w", domain.ErrUnauthenticated))
 		return
 	}
 	data, err := h.Svc.User.GetByID(ctx, user.ID)

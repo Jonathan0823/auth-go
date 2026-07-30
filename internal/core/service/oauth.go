@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 	"github.com/Jonathan0823/auth-go/internal/core/port"
@@ -16,17 +18,16 @@ func NewOAuthService(repo port.Repository) port.OAuthService {
 }
 
 func (s *oAuthService) OAuthLogin(ctx context.Context, user domain.User) (*domain.User, error) {
-	err := s.repo.Users().Create(ctx, user)
-	if err != nil {
-		// Conflict means the user already exists — that's fine, continue.
-		if code := domain.ErrorCode(err); code != domain.ErrCodeConflict {
-			return nil, domain.InternalServerError("failed to create user", err)
-		}
+	if err := s.repo.Users().Create(ctx, user); err != nil && !errors.Is(err, domain.ErrConflict) {
+		return nil, fmt.Errorf("create oauth user: %w", err)
 	}
 
 	userData, err := s.repo.Users().GetByEmail(ctx, user.Email, false)
-	if err != nil || userData == nil {
-		return nil, domain.InternalServerError("failed to retrieve user after creation", err)
+	if err != nil {
+		return nil, fmt.Errorf("get oauth user: %w", err)
+	}
+	if userData == nil {
+		return nil, fmt.Errorf("oauth user not found: %w", domain.ErrNotFound)
 	}
 	return userData, nil
 }

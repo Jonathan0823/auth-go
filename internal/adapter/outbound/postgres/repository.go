@@ -147,7 +147,7 @@ func (r *userRepository) Create(ctx context.Context, user domain.User) error {
 	})
 	if err != nil {
 		if pgUniqueViolation(err) {
-			return domain.Conflict("user already exists", err)
+			return fmt.Errorf("user already exists: %w", domain.ErrConflict)
 		}
 		return err
 	}

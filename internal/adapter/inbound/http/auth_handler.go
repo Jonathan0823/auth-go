@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -62,12 +63,12 @@ func (h *Handler) Logout(c *gin.Context) {
 	defer cancel()
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		c.Error(domain.Unauthorized("Refresh token not found", err))
+		c.Error(fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated))
 		return
 	}
 	claims, err := h.Tokens.ValidateToken(refreshToken, "refresh")
 	if err != nil {
-		c.Error(domain.Unauthorized("Invalid refresh token", err))
+		c.Error(fmt.Errorf("invalid refresh token: %w", domain.ErrUnauthenticated))
 		return
 	}
 	oldJTI := claims["jti"].(string)
@@ -86,7 +87,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 	defer cancel()
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		c.Error(domain.Unauthorized("Refresh token not found", err))
+		c.Error(fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated))
 		return
 	}
 
@@ -121,7 +122,7 @@ func (h *Handler) ResendVerifyEmail(c *gin.Context) {
 	defer cancel()
 	email := c.Query("email")
 	if email == "" {
-		c.Error(domain.BadRequest("Email is required", nil))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
 		return
 	}
 	if err := h.Svc.Auth.CreateVerifyEmail(ctx, email); err != nil {

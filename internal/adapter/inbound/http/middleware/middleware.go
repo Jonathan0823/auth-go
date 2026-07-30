@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -23,13 +24,13 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := c.Cookie("access_token")
 		if err != nil || token == "" {
-			c.Error(domain.Unauthorized("Unauthorized: missing token", err))
+			c.Error(fmt.Errorf("missing access token: %w", domain.ErrUnauthenticated))
 			c.Abort()
 			return
 		}
 		claims, err := m.Tokens.ValidateToken(token, "access")
 		if err != nil {
-			c.Error(domain.Unauthorized("Unauthorized: invalid token", err))
+			c.Error(fmt.Errorf("invalid access token: %w", domain.ErrUnauthenticated))
 			c.Abort()
 			return
 		}
@@ -54,31 +55,16 @@ func OAuthMiddleware() gin.HandlerFunc {
 func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
-		if len(c.Errors) > 0 {
-			err := c.Errors.Last().Err
-			if appErr, ok := err.(*domain.Error); ok {
-				if appErr.Err != nil {
-					log.Println("Internal error:", appErr.Err)
-				}
-				code, msg := http.StatusInternalServerError, "internal server error"
-				switch appErr.Code {
-				case domain.ErrCodeBadRequest:
-					code = http.StatusBadRequest
-					msg = appErr.Message
-				case domain.ErrCodeNotFound:
-					code = http.StatusNotFound
-				case domain.ErrCodeConflict:
-					code = http.StatusConflict
-				case domain.ErrCodeUnauthorized:
-					code = http.StatusUnauthorized
-				case domain.ErrCodeForbidden:
-					code = http.StatusForbidden
-				}
-				c.JSON(code, gin.H{"error": msg})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-			}
-			c.Abort()
+		if len(c.Errors) == 0 {
+			return
 		}
+
+		err := c.Errors.Last().Err
+		status, message := mapError(err)
+		if status >= http.StatusInternalServerError {
+			log.Printf("internal error: %v", err)
+		}
+		c.JSON(status, gin.H{"error": message})
+		c.Abort()
 	}
 }
