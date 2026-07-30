@@ -6,6 +6,8 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine, h *Handler) {
+	authMW := inhttp.NewAuthMiddleware(h.Tokens)
+
 	api := r.Group("/api")
 	api.Use(inhttp.ErrorHandler())
 	auth := api.Group("/auth")
@@ -32,7 +34,7 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		}
 	}
 	user := api.Group("/user")
-	user.Use(inhttp.AuthMiddleware())
+	user.Use(authMW.Handler())
 	{
 		user.GET("/me", h.GetCurrentUser)
 		user.GET("/:id", h.GetUserByID)

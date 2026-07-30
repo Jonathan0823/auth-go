@@ -5,9 +5,10 @@ import (
 )
 
 type Handler struct {
-	Svc port.Service
+	Svc    port.Service
+	Tokens port.TokenService
 }
 
-func NewHandler(svc port.Service) *Handler {
-	return &Handler{Svc: svc}
+func NewHandler(svc port.Service, tokens port.TokenService) *Handler {
+	return &Handler{Svc: svc, Tokens: tokens}
 }

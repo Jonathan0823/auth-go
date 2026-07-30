@@ -87,11 +87,7 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		c.Error(domain.Unauthorized("User is not authenticated", err))
 		return
 	}
-	if currentUser.ID != id {
-		c.Error(domain.Forbidden("You are not authorized to delete this user", nil))
-		return
-	}
-	if err := h.Svc.User.Delete(ctx, id); err != nil {
+	if err := h.Svc.User.Delete(ctx, id, currentUser.ID); err != nil {
 		c.Error(err)
 		return
 	}

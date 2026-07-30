@@ -7,11 +7,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/markbates/goth/gothic"
 
-	"github.com/Jonathan0823/auth-go/internal/adapter/outbound/jwt"
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
+	"github.com/Jonathan0823/auth-go/internal/core/port"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+type AuthMiddleware struct {
+	Tokens port.TokenService
+}
+
+func NewAuthMiddleware(tokens port.TokenService) *AuthMiddleware {
+	return &AuthMiddleware{Tokens: tokens}
+}
+
+func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := c.Cookie("access_token")
 		if err != nil || token == "" {
@@ -19,7 +27,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		claims, err := jwt.ValidateJWT(token, "access")
+		claims, err := m.Tokens.ValidateToken(token, "access")
 		if err != nil {
 			c.Error(domain.Unauthorized("Unauthorized: invalid token", err))
 			c.Abort()
@@ -52,7 +60,20 @@ func ErrorHandler() gin.HandlerFunc {
 				if appErr.Err != nil {
 					log.Println("Internal error:", appErr.Err)
 				}
-				c.JSON(appErr.Code, gin.H{"error": appErr.Message})
+				code := http.StatusInternalServerError
+				switch appErr.Code {
+				case domain.ErrCodeBadRequest:
+					code = http.StatusBadRequest
+				case domain.ErrCodeNotFound:
+					code = http.StatusNotFound
+				case domain.ErrCodeConflict:
+					code = http.StatusConflict
+				case domain.ErrCodeUnauthorized:
+					code = http.StatusUnauthorized
+				case domain.ErrCodeForbidden:
+					code = http.StatusForbidden
+				}
+				c.JSON(code, gin.H{"error": appErr.Message})
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			}

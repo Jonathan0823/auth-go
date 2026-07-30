@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/Jonathan0823/auth-go/internal/adapter/outbound/jwt"
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
@@ -66,7 +65,7 @@ func (h *Handler) Logout(c *gin.Context) {
 		c.Error(domain.Unauthorized("Refresh token not found", err))
 		return
 	}
-	claims, err := jwt.ValidateJWT(refreshToken, "refresh")
+	claims, err := h.Tokens.ValidateToken(refreshToken, "refresh")
 	if err != nil {
 		c.Error(domain.Unauthorized("Invalid refresh token", err))
 		return
