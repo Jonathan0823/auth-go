@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	inhttp "github.com/Jonathan0823/auth-go/internal/adapter/inbound/http"
+	inhttpmw "github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/middleware"
 	outemail "github.com/Jonathan0823/auth-go/internal/adapter/outbound/email"
 	outjwt "github.com/Jonathan0823/auth-go/internal/adapter/outbound/jwt"
 	outpassword "github.com/Jonathan0823/auth-go/internal/adapter/outbound/password"
@@ -25,10 +26,11 @@ func Run(cfg platform.Config) {
 	svc := service.New(repo, tokens, email, hasher, cfg.BaseURL)
 
 	r := gin.New()
-	r.Use(gin.Logger())
+	logger := platform.NewLogger(cfg.LogLevel)
+	r.Use(inhttpmw.RequestID(), inhttpmw.RequestLogger(logger))
 
 	handler := inhttp.NewHandler(svc, tokens)
-	inhttp.RegisterRoutes(r, handler)
+	inhttp.RegisterRoutes(r, handler, logger)
 
 	platform.InitServer(r, cfg)
 }

@@ -1,15 +1,17 @@
 package http
 
 import (
+	"log/slog"
+
 	inhttp "github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, h *Handler) {
+func RegisterRoutes(r *gin.Engine, h *Handler, logger *slog.Logger) {
 	authMW := inhttp.NewAuthMiddleware(h.Tokens)
 
 	api := r.Group("/api")
-	api.Use(inhttp.ErrorHandler())
+	api.Use(inhttp.ErrorHandler(logger))
 	auth := api.Group("/auth")
 	{
 		auth.POST("/register", h.Register)

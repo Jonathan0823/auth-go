@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -52,7 +52,7 @@ func OAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-func ErrorHandler() gin.HandlerFunc {
+func ErrorHandler(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 		if len(c.Errors) == 0 {
@@ -61,8 +61,13 @@ func ErrorHandler() gin.HandlerFunc {
 
 		err := c.Errors.Last().Err
 		status, message := mapError(err)
-		if status >= http.StatusInternalServerError {
-			log.Printf("internal error: %v", err)
+		if statusIsServerError(status) {
+			logger.ErrorContext(c.Request.Context(), "application error",
+				slog.String("request_id", RequestIDFromContext(c.Request.Context())),
+				slog.Int("status", status),
+				slog.String("error", message),
+				slog.String("error_type", fmt.Sprintf("%T", err)),
+			)
 		}
 		c.JSON(status, gin.H{"error": message})
 		c.Abort()
