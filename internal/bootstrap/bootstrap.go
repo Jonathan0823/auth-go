@@ -22,8 +22,6 @@ func Run(cfg platform.Config) {
 	tokens := outjwt.NewTokenService()
 	email := outemail.NewSender()
 	hasher := outpassword.NewHasher()
-	svc := service.New(repo, tokens, email, hasher, cfg.BaseURL)
-
 	oauth := outoauth.New(outoauth.Config{
 		BaseURL:            cfg.BaseURL,
 		SessionSecret:      cfg.SessionSecret,
@@ -32,12 +30,13 @@ func Run(cfg platform.Config) {
 		GoogleClientID:     cfg.GoogleClientID,
 		GoogleClientSecret: cfg.GoogleClientSecret,
 	})
+	svc := service.New(repo, tokens, email, hasher, cfg.BaseURL, oauth)
 
 	r := gin.New()
 	logger := platform.NewLogger(cfg.LogLevel)
 	r.Use(inhttpmw.RequestID(), inhttpmw.RequestLogger(logger))
 
-	handler := inhttp.NewHandler(svc, tokens, oauth)
+	handler := inhttp.NewHandler(svc, tokens)
 	inhttp.RegisterRoutes(r, handler, logger)
 
 	platform.InitServer(r, cfg)

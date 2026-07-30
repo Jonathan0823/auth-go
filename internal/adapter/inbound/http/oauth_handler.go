@@ -11,31 +11,18 @@ import (
 )
 
 func (h *Handler) OAuthLogin(c *gin.Context) {
-	h.OAuth.BeginAuth(c.Writer, c.Request, c.Param("provider"))
+	h.Svc.OAuth.BeginAuth(c.Writer, c.Request, c.Param("provider"))
 }
 
 func (h *Handler) OAuthCallback(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
-	profile, err := h.OAuth.CompleteAuth(c.Writer, c.Request, c.Param("provider"))
+	userData, err := h.Svc.OAuth.OAuthLogin(ctx, c.Writer, c.Request, c.Param("provider"))
 	if err != nil {
 		c.Error(fmt.Errorf("oauth authentication failed: %w", domain.ErrUnauthenticated))
 		return
 	}
 
-	user := domain.User{
-		OAuthID:   profile.UserID,
-		Email:     profile.Email,
-		Username:  profile.Name,
-		Provider:  profile.Provider,
-		AvatarURL: profile.AvatarURL,
-	}
-
-	userData, err := h.Svc.OAuth.OAuthLogin(ctx, user)
-	if err != nil {
-		c.Error(err)
-		return
-	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User logged in successfully",
 		"user":    dto.UserResponseFromDomain(userData),
