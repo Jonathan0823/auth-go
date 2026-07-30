@@ -23,7 +23,7 @@ type UserService interface {
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
 	GetAll(ctx context.Context) ([]*domain.User, error)
 	Update(ctx context.Context, currentUserID int, user domain.UpdateUserRequest) error
-	Delete(ctx context.Context, id int) error
+	Delete(ctx context.Context, id int, requestingUserID int) error
 }
 
 type OAuthService interface {

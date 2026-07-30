@@ -6,6 +6,7 @@ type Config struct {
 	Port           string
 	AllowedOrigins string
 	Environment    string
+	BaseURL        string
 }
 
 func LoadConfig() Config {
@@ -13,5 +14,6 @@ func LoadConfig() Config {
 		Port:           os.Getenv("PORT"),
 		AllowedOrigins: os.Getenv("ALLOWED_ORIGINS"),
 		Environment:    os.Getenv("ENVIRONMENT"),
+		BaseURL:        os.Getenv("BASE_URL"),
 	}
 }

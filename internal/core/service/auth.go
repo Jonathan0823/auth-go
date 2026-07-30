@@ -2,39 +2,39 @@ package service
 
 import (
 	"context"
-	"database/sql"
-	goerror "errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 	"github.com/Jonathan0823/auth-go/internal/core/port"
 )
 
 type authService struct {
-	repo   port.Repository
-	tokens port.TokenService
-	email  port.EmailSender
+	repo    port.Repository
+	tokens  port.TokenService
+	email   port.EmailSender
+	hasher  port.PasswordHasher
+	baseURL string
 }
 
-func NewAuthService(repo port.Repository, tokens port.TokenService, email port.EmailSender) port.AuthService {
+func NewAuthService(repo port.Repository, tokens port.TokenService, email port.EmailSender, hasher port.PasswordHasher, baseURL string) port.AuthService {
 	return &authService{
-		repo:   repo,
-		tokens: tokens,
-		email:  email,
+		repo:    repo,
+		tokens:  tokens,
+		email:   email,
+		hasher:  hasher,
+		baseURL: baseURL,
 	}
 }
 
 func (s *authService) Register(ctx context.Context, user domain.User) error {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	hashed, err := s.hasher.Hash(user.Password)
 	if err != nil {
 		return domain.InternalServerError("failed to hash password", err)
 	}
-	user.Password = string(hashed)
+	user.Password = hashed
 
 	if err := s.repo.Users().Create(ctx, user); err != nil {
 		return domain.InternalServerError("failed to create user", err)
@@ -55,7 +55,7 @@ func (s *authService) Login(ctx context.Context, user domain.User) (string, stri
 		return "", "", domain.NotFound("user not found", nil)
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(user.Password)); err != nil {
+	if err := s.hasher.Compare(userFromDB.Password, user.Password); err != nil {
 		return "", "", domain.Unauthorized("invalid credentials", err)
 	}
 
@@ -121,11 +121,11 @@ func (s *authService) VerifyEmail(ctx context.Context, id string) error {
 	}
 
 	verifyEmail, err := s.repo.Auth().GetVerifyEmailByID(ctx, id)
-	if err != nil || verifyEmail.ID == uuid.Nil {
-		if goerror.Is(err, sql.ErrNoRows) {
-			return domain.NotFound("verification token not found", err)
-		}
+	if err != nil {
 		return domain.InternalServerError("internal server error", err)
+	}
+	if verifyEmail.ID == uuid.Nil {
+		return domain.NotFound("verification token not found", nil)
 	}
 
 	if time.Now().After(verifyEmail.ExpiredAt) {
@@ -158,11 +158,12 @@ func (s *authService) ForgotPassword(ctx context.Context, email string) error {
 		return domain.InternalServerError("failed to create forgot password record", err)
 	}
 
-	baseURL := os.Getenv("BASE_URL")
 	body := fmt.Sprintf(`
 Click here to reset your password: <a href="%s/reset-password?id=%s">Reset Password</a>`,
-		baseURL, data.ID.String())
-	_ = s.email.Send(email, "Password Reset", body)
+		s.baseURL, data.ID.String())
+	if err := s.email.Send(email, "Password Reset", body); err != nil {
+		return domain.InternalServerError("failed to send password reset email", err)
+	}
 	return nil
 }
 
@@ -171,18 +172,18 @@ func (s *authService) ResetPassword(ctx context.Context, tokenID, newPassword st
 		return domain.BadRequest("invalid token", err)
 	}
 
-	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	hashed, err := s.hasher.Hash(newPassword)
 	if err != nil {
 		return domain.InternalServerError("failed to hash new password", err)
 	}
 
 	return s.repo.WithTx(ctx, func(u port.UnitOfWork) error {
 		forgotPassword, err := u.Auth().GetForgotPasswordByID(ctx, tokenID)
-		if err != nil || forgotPassword.ID == uuid.Nil {
-			if goerror.Is(err, sql.ErrNoRows) {
-				return domain.NotFound("forgot password token not found", err)
-			}
+		if err != nil {
 			return domain.InternalServerError("internal server error", err)
+		}
+		if forgotPassword.ID == uuid.Nil {
+			return domain.NotFound("forgot password token not found", nil)
 		}
 
 		if time.Now().After(forgotPassword.ExpiredAt) {
@@ -193,7 +194,7 @@ func (s *authService) ResetPassword(ctx context.Context, tokenID, newPassword st
 			return domain.InternalServerError("failed to delete forgot password record", err)
 		}
 
-		if err = u.Users().UpdatePassword(ctx, forgotPassword.UserID, string(hashed)); err != nil {
+		if err = u.Users().UpdatePassword(ctx, forgotPassword.UserID, hashed); err != nil {
 			return domain.InternalServerError("failed to update user password", err)
 		}
 		return nil
@@ -208,7 +209,7 @@ func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userA
 
 	oldJTI := claims["jti"].(string)
 	isInvalidated, err := s.IsTokenLogInvalidated(ctx, oldJTI)
-	if err != nil && isInvalidated {
+	if err != nil || isInvalidated {
 		return "", "", domain.Unauthorized("invalidated refresh token", err)
 	}
 

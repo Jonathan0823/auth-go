@@ -55,7 +55,10 @@ func (s *userService) Update(ctx context.Context, currentUserID int, user domain
 	return nil
 }
 
-func (s *userService) Delete(ctx context.Context, id int) error {
+func (s *userService) Delete(ctx context.Context, id int, requestingUserID int) error {
+	if requestingUserID != id {
+		return domain.Forbidden("you are not authorized to delete this user", nil)
+	}
 	if err := s.repo.Users().Delete(ctx, id); err != nil {
 		return domain.InternalServerError("failed to delete user", err)
 	}
