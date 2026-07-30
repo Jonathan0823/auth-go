@@ -9,7 +9,7 @@ COPY . .
 
 # Build static binary
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-RUN go build -trimpath -ldflags "-s -w" -o /server .
+RUN go build -trimpath -ldflags "-s -w" -o /server ./cmd/auth-go
 
 # --- Runner (tiny) ---
 FROM gcr.io/distroless/static-debian12
