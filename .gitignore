@@ -1,4 +1,5 @@
 .env**
 !.env.example
 tasks/
+auth-go
 
