@@ -56,8 +56,8 @@ DELETE FROM verify_emails
 WHERE verify_emails.id = $1;
 
 -- name: CreateForgotPasswordEmail :exec
-INSERT INTO forgot_password_emails (id, email, expired_at)
-VALUES ($1, $2, $3);
+INSERT INTO forgot_password_emails (id, user_id, email, expired_at)
+VALUES ($1, $2, $3, $4);
 
 -- name: GetForgotPasswordByID :one
 SELECT forgot_password_emails.id, forgot_password_emails.user_id, forgot_password_emails.email, forgot_password_emails.expired_at

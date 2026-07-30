@@ -12,18 +12,24 @@ import (
 )
 
 const createForgotPasswordEmail = `-- name: CreateForgotPasswordEmail :exec
-INSERT INTO forgot_password_emails (id, email, expired_at)
-VALUES ($1, $2, $3)
+INSERT INTO forgot_password_emails (id, user_id, email, expired_at)
+VALUES ($1, $2, $3, $4)
 `
 
 type CreateForgotPasswordEmailParams struct {
 	ID        pgtype.UUID
+	UserID    int32
 	Email     string
 	ExpiredAt pgtype.Timestamp
 }
 
 func (q *Queries) CreateForgotPasswordEmail(ctx context.Context, arg CreateForgotPasswordEmailParams) error {
-	_, err := q.db.Exec(ctx, createForgotPasswordEmail, arg.ID, arg.Email, arg.ExpiredAt)
+	_, err := q.db.Exec(ctx, createForgotPasswordEmail,
+		arg.ID,
+		arg.UserID,
+		arg.Email,
+		arg.ExpiredAt,
+	)
 	return err
 }
 

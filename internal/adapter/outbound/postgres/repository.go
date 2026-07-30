@@ -145,7 +145,13 @@ func (r *userRepository) Create(ctx context.Context, user domain.User) error {
 		Email:    user.Email,
 		Password: user.Password,
 	})
-	return err
+	if err != nil {
+		if pgUniqueViolation(err) {
+			return domain.Conflict("user already exists", err)
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *userRepository) GetAll(ctx context.Context) ([]*domain.User, error) {
@@ -207,6 +213,9 @@ func (r *authRepository) GetVerifyEmailByID(ctx context.Context, id string) (dom
 	}
 	row, err := r.q.GetVerifyEmailByID(ctx, uid)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.VerifyEmail{}, nil
+		}
 		return domain.VerifyEmail{}, err
 	}
 	return domain.VerifyEmail{
@@ -230,6 +239,7 @@ func (r *authRepository) VerifyEmail(ctx context.Context, id string) error {
 func (r *authRepository) CreateForgotPasswordEmail(ctx context.Context, data domain.ForgotPassword) error {
 	return r.q.CreateForgotPasswordEmail(ctx, CreateForgotPasswordEmailParams{
 		ID:        pgtypeUUID(data.ID),
+		UserID:    int32(data.UserID),
 		Email:     data.Email,
 		ExpiredAt: pgtypeTimestamp(data.ExpiredAt),
 	})
@@ -242,6 +252,9 @@ func (r *authRepository) GetForgotPasswordByID(ctx context.Context, id string) (
 	}
 	row, err := r.q.GetForgotPasswordByID(ctx, uid)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ForgotPassword{}, nil
+		}
 		return domain.ForgotPassword{}, err
 	}
 	return domain.ForgotPassword{
