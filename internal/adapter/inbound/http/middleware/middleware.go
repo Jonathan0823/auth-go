@@ -3,10 +3,8 @@ package middleware
 import (
 	"fmt"
 	"log/slog"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/markbates/goth/gothic"
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 	"github.com/Jonathan0823/auth-go/internal/core/port"
@@ -35,19 +33,6 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 			return
 		}
 		c.Set("user", claims)
-		c.Next()
-	}
-}
-
-func OAuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		provider := c.Param("provider")
-		if provider == "" {
-			provider = "github"
-		}
-		gothic.GetProviderName = func(req *http.Request) (string, error) {
-			return provider, nil
-		}
 		c.Next()
 	}
 }
