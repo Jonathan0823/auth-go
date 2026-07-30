@@ -1,2 +1,4 @@
-.env
-.env.prod
+.env**
+!.env.example
+tasks/
+
