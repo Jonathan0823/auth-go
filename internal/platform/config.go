@@ -7,6 +7,7 @@ type Config struct {
 	AllowedOrigins string
 	Environment    string
 	BaseURL        string
+	LogLevel       string
 }
 
 func LoadConfig() Config {
@@ -15,5 +16,6 @@ func LoadConfig() Config {
 		AllowedOrigins: os.Getenv("ALLOWED_ORIGINS"),
 		Environment:    os.Getenv("ENVIRONMENT"),
 		BaseURL:        os.Getenv("BASE_URL"),
+		LogLevel:       os.Getenv("LOG_LEVEL"),
 	}
 }
