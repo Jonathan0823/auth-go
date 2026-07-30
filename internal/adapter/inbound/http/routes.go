@@ -29,7 +29,6 @@ func RegisterRoutes(r *gin.Engine, h *Handler, logger *slog.Logger) {
 	oauth := api.Group("/oauth")
 	{
 		provider := oauth.Group("/:provider")
-		provider.Use(inhttp.OAuthMiddleware())
 		{
 			provider.GET("/", h.OAuthLogin)
 			provider.GET("/callback", h.OAuthCallback)

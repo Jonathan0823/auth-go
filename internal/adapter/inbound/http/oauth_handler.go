@@ -5,31 +5,30 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/markbates/goth/gothic"
 
 	"github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/dto"
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
 func (h *Handler) OAuthLogin(c *gin.Context) {
-	gothic.BeginAuthHandler(c.Writer, c.Request)
+	h.OAuth.BeginAuth(c.Writer, c.Request, c.Param("provider"))
 }
 
 func (h *Handler) OAuthCallback(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
-	gothUser, err := gothic.CompleteUserAuth(c.Writer, c.Request)
+	profile, err := h.OAuth.CompleteAuth(c.Writer, c.Request, c.Param("provider"))
 	if err != nil {
 		c.Error(fmt.Errorf("oauth authentication failed: %w", domain.ErrUnauthenticated))
 		return
 	}
 
 	user := domain.User{
-		OAuthID:   gothUser.UserID,
-		Email:     gothUser.Email,
-		Username:  gothUser.NickName,
-		Provider:  gothUser.Provider,
-		AvatarURL: gothUser.AvatarURL,
+		OAuthID:   profile.UserID,
+		Email:     profile.Email,
+		Username:  profile.Name,
+		Provider:  profile.Provider,
+		AvatarURL: profile.AvatarURL,
 	}
 
 	userData, err := h.Svc.OAuth.OAuthLogin(ctx, user)

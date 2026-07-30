@@ -7,6 +7,7 @@ import (
 	inhttpmw "github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/middleware"
 	outemail "github.com/Jonathan0823/auth-go/internal/adapter/outbound/email"
 	outjwt "github.com/Jonathan0823/auth-go/internal/adapter/outbound/jwt"
+	outoauth "github.com/Jonathan0823/auth-go/internal/adapter/outbound/oauth"
 	outpassword "github.com/Jonathan0823/auth-go/internal/adapter/outbound/password"
 	outpostgres "github.com/Jonathan0823/auth-go/internal/adapter/outbound/postgres"
 	"github.com/Jonathan0823/auth-go/internal/core/service"
@@ -14,8 +15,6 @@ import (
 )
 
 func Run(cfg platform.Config) {
-	platform.InitOAuth()
-
 	pool := platform.NewPool()
 	defer pool.Close()
 
@@ -25,11 +24,20 @@ func Run(cfg platform.Config) {
 	hasher := outpassword.NewHasher()
 	svc := service.New(repo, tokens, email, hasher, cfg.BaseURL)
 
+	oauth := outoauth.New(outoauth.Config{
+		BaseURL:            cfg.BaseURL,
+		SessionSecret:      cfg.SessionSecret,
+		GitHubClientID:     cfg.GitHubClientID,
+		GitHubClientSecret: cfg.GitHubClientSecret,
+		GoogleClientID:     cfg.GoogleClientID,
+		GoogleClientSecret: cfg.GoogleClientSecret,
+	})
+
 	r := gin.New()
 	logger := platform.NewLogger(cfg.LogLevel)
 	r.Use(inhttpmw.RequestID(), inhttpmw.RequestLogger(logger))
 
-	handler := inhttp.NewHandler(svc, tokens)
+	handler := inhttp.NewHandler(svc, tokens, oauth)
 	inhttp.RegisterRoutes(r, handler, logger)
 
 	platform.InitServer(r, cfg)
