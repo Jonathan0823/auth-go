@@ -46,7 +46,7 @@ func (s *userService) GetAll(ctx context.Context) ([]*domain.User, error) {
 	return data, nil
 }
 
-func (s *userService) Update(ctx context.Context, currentUserID int, user domain.UpdateUserRequest) error {
+func (s *userService) Update(ctx context.Context, currentUserID int, user domain.UpdateUserCommand) error {
 	if currentUserID != user.ID {
 		return fmt.Errorf("update user %d forbidden: %w", user.ID, domain.ErrForbidden)
 	}

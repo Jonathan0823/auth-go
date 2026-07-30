@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/dto"
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
@@ -15,8 +16,8 @@ var secure = os.Getenv("ENVIRONMENT") == "production"
 func (h *Handler) Register(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
-	var req domain.LoginRegisterRequest
-	if isValid := BindJSONWithValidation(c, &req); !isValid {
+	var req dto.CredentialsRequest
+	if !BindJSONWithValidation(c, &req) {
 		return
 	}
 
@@ -31,8 +32,8 @@ func (h *Handler) Register(c *gin.Context) {
 func (h *Handler) Login(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
-	var req domain.LoginRegisterRequest
-	if isValid := BindJSONWithValidation(c, &req); !isValid {
+	var req dto.CredentialsRequest
+	if !BindJSONWithValidation(c, &req) {
 		return
 	}
 
@@ -42,7 +43,6 @@ func (h *Handler) Login(c *gin.Context) {
 		IPAddress: c.ClientIP(),
 		UserAgent: c.GetHeader("User-Agent"),
 	}
-
 	accessToken, refreshToken, err := h.Svc.Auth.Login(ctx, user)
 	if err != nil {
 		c.Error(err)
@@ -71,14 +71,18 @@ func (h *Handler) Logout(c *gin.Context) {
 		c.Error(fmt.Errorf("invalid refresh token: %w", domain.ErrUnauthenticated))
 		return
 	}
-	oldJTI := claims["jti"].(string)
+	oldJTI, ok := claims["jti"].(string)
+	if !ok {
+		c.Error(fmt.Errorf("refresh token missing jti: %w", domain.ErrUnauthenticated))
+		return
+	}
 	if err := h.Svc.Auth.InvalidateJWTTokens(ctx, oldJTI, ""); err != nil {
 		c.Error(err)
 		return
 	}
-	domain := os.Getenv("DOMAIN")
-	c.SetCookie("access_token", "", -1, "/", domain, secure, false)
-	c.SetCookie("refresh_token", "", -1, "/", domain, secure, true)
+	cookieDomain := os.Getenv("DOMAIN")
+	c.SetCookie("access_token", "", -1, "/", cookieDomain, secure, false)
+	c.SetCookie("refresh_token", "", -1, "/", cookieDomain, secure, true)
 	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"})
 }
 
@@ -97,20 +101,19 @@ func (h *Handler) Refresh(c *gin.Context) {
 		return
 	}
 
-	d := os.Getenv("DOMAIN")
-	if d == "" {
-		d = "localhost"
+	cookieDomain := os.Getenv("DOMAIN")
+	if cookieDomain == "" {
+		cookieDomain = "localhost"
 	}
-	c.SetCookie("access_token", newAccess, 7*24*3600, "/", d, secure, false)
-	c.SetCookie("refresh_token", newRefresh, 7*24*3600, "/", d, secure, true)
+	c.SetCookie("access_token", newAccess, 7*24*3600, "/", cookieDomain, secure, false)
+	c.SetCookie("refresh_token", newRefresh, 7*24*3600, "/", cookieDomain, secure, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Access token refreshed successfully"})
 }
 
 func (h *Handler) VerifyEmail(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
-	id := c.Query("id")
-	if err := h.Svc.Auth.VerifyEmail(ctx, id); err != nil {
+	if err := h.Svc.Auth.VerifyEmail(ctx, c.Query("id")); err != nil {
 		c.Error(err)
 		return
 	}
@@ -135,10 +138,8 @@ func (h *Handler) ResendVerifyEmail(c *gin.Context) {
 func (h *Handler) ForgotPassword(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
-	var req struct {
-		Email string `json:"email" validate:"required,email"`
-	}
-	if isValid := BindJSONWithValidation(c, &req); !isValid {
+	var req dto.ForgotPasswordRequest
+	if !BindJSONWithValidation(c, &req) {
 		return
 	}
 	if err := h.Svc.Auth.ForgotPassword(ctx, req.Email); err != nil {
@@ -151,8 +152,8 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 func (h *Handler) ResetPassword(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
-	var req domain.ResetPasswordRequest
-	if isValid := BindJSONWithValidation(c, &req); !isValid {
+	var req dto.ResetPasswordRequest
+	if !BindJSONWithValidation(c, &req) {
 		return
 	}
 	if err := h.Svc.Auth.ResetPassword(ctx, req.ID, req.Password); err != nil {

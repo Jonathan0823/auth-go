@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/markbates/goth/gothic"
 
+	"github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/dto"
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
@@ -38,6 +39,6 @@ func (h *Handler) OAuthCallback(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User logged in successfully",
-		"user":    userData,
+		"user":    dto.UserResponseFromDomain(userData),
 	})
 }

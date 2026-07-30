@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/dto"
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
@@ -23,7 +24,10 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 		c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "User retrieved successfully", "user": user})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User retrieved successfully",
+		"user":    dto.UserResponseFromDomain(user),
+	})
 }
 
 func (h *Handler) GetAllUsers(c *gin.Context) {
@@ -34,10 +38,10 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 		c.Error(err)
 		return
 	}
-	if users == nil {
-		users = []*domain.User{}
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Users retrieved successfully", "users": users})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Users retrieved successfully",
+		"users":   dto.UserResponsesFromDomain(users),
+	})
 }
 
 func (h *Handler) GetUserByEmail(c *gin.Context) {
@@ -53,14 +57,17 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 		c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "User retrieved successfully", "user": user})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User retrieved successfully",
+		"user":    dto.UserResponseFromDomain(user),
+	})
 }
 
 func (h *Handler) UpdateUser(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
-	var req domain.UpdateUserRequest
-	if isValid := BindJSONWithValidation(c, &req); !isValid {
+	var req dto.UpdateUserRequest
+	if !BindJSONWithValidation(c, &req) {
 		return
 	}
 	currentUser, err := GetUser(c)
@@ -68,7 +75,13 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		c.Error(fmt.Errorf("user is not authenticated: %w", domain.ErrUnauthenticated))
 		return
 	}
-	if err := h.Svc.User.Update(ctx, currentUser.ID, req); err != nil {
+	command := domain.UpdateUserCommand{
+		ID:        req.ID,
+		Username:  req.Username,
+		AvatarURL: req.AvatarURL,
+		Email:     req.Email,
+	}
+	if err := h.Svc.User.Update(ctx, currentUser.ID, command); err != nil {
 		c.Error(err)
 		return
 	}
@@ -108,5 +121,8 @@ func (h *Handler) GetCurrentUser(c *gin.Context) {
 		c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Current user retrieved successfully", "user": data})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Current user retrieved successfully",
+		"user":    dto.UserResponseFromDomain(data),
+	})
 }

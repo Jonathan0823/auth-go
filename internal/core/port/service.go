@@ -22,7 +22,7 @@ type UserService interface {
 	GetByID(ctx context.Context, id int) (*domain.User, error)
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
 	GetAll(ctx context.Context) ([]*domain.User, error)
-	Update(ctx context.Context, currentUserID int, user domain.UpdateUserRequest) error
+	Update(ctx context.Context, currentUserID int, user domain.UpdateUserCommand) error
 	Delete(ctx context.Context, id int, requestingUserID int) error
 }
 
