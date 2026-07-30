@@ -60,10 +60,11 @@ func ErrorHandler() gin.HandlerFunc {
 				if appErr.Err != nil {
 					log.Println("Internal error:", appErr.Err)
 				}
-				code := http.StatusInternalServerError
+				code, msg := http.StatusInternalServerError, "internal server error"
 				switch appErr.Code {
 				case domain.ErrCodeBadRequest:
 					code = http.StatusBadRequest
+					msg = appErr.Message
 				case domain.ErrCodeNotFound:
 					code = http.StatusNotFound
 				case domain.ErrCodeConflict:
@@ -73,7 +74,7 @@ func ErrorHandler() gin.HandlerFunc {
 				case domain.ErrCodeForbidden:
 					code = http.StatusForbidden
 				}
-				c.JSON(code, gin.H{"error": appErr.Message})
+				c.JSON(code, gin.H{"error": msg})
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			}
