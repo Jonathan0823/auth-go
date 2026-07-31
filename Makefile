@@ -1,6 +1,10 @@
+ENV_FILE ?= .env
+-include $(ENV_FILE)
+export
+
 DATABASE_URL ?=
 ifeq ($(strip $(DATABASE_URL)),)
-$(error DATABASE_URL must be set in the environment)
+$(error DATABASE_URL must be set in $(ENV_FILE) or the environment)
 endif
 MIGRATE_DIR ?= migrations
 MIGRATE ?= migrate
