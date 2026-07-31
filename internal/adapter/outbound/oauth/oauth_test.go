@@ -1,9 +1,12 @@
 package oauth
 
 import (
+	"errors"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
 )
 
 func TestProfileFromUser(t *testing.T) {
@@ -27,5 +30,19 @@ func TestFirstNonEmpty(t *testing.T) {
 	}
 	if got := firstNonEmpty("primary", "fallback"); got != "primary" {
 		t.Fatalf("firstNonEmpty() = %q, want %q", got, "primary")
+	}
+}
+
+func TestNewAndProviderHooks(t *testing.T) {
+	New(Config{BaseURL: "http://localhost", SessionSecret: "session-secret"})
+	req := httptest.NewRequest("GET", "/", nil)
+	withProvider("github", func() {
+		provider, err := gothic.GetProviderName(req)
+		if err != nil || provider != "github" {
+			t.Fatalf("provider = %q, err = %v", provider, err)
+		}
+	})
+	if err := withProviderErr("google", func() error { return errors.New("provider failure") }); err == nil {
+		t.Fatal("withProviderErr succeeded unexpectedly")
 	}
 }
