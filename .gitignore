@@ -1,4 +1,8 @@
 .env**
 !.env.example
 tasks/
+.pi/
+.scannerwork/
+auth-go
+sonar-project.properties
 
