@@ -24,6 +24,8 @@ services:
       - "8080:8080"
     env_file:
       - .env.prod
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/auth_go?sslmode=disable
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

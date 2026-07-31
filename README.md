@@ -77,12 +77,7 @@ The application exposes a RESTful API for user authentication and management.
 The application is configured using environment variables. Create a `.env` file in the root of the project with the following variables:
 
 ```dotenv
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-DB_NAME=your_db_name
-DB_SSL=disable
+DATABASE_URL=postgres://your_db_user:your_db_password@localhost:5432/your_db_name?sslmode=disable
 
 PORT=8080
 
