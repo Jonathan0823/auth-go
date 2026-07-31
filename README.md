@@ -1,116 +1,141 @@
 # auth-go
 
-This is a Go-based web application that provides user authentication and management services. It uses the Gin framework for routing and handling HTTP requests, and PostgreSQL for the database.
+A production-minded authentication starter for Go teams who want secure defaults without a giant framework.
 
-## Features
+Build a REST API with Gin, PostgreSQL, OAuth, email verification, password reset, and a security-focused token lifecycle—ready to extend from a clean hexagonal architecture.
 
-- **User Authentication:**
-  - Register new users
-  - Login with email and password
-  - Logout
-  - Password reset
-  - Email verification
-- **OAuth 2.0:**
-  - Login with third-party providers (e.g., Google, Github)
-- **User Management:**
-  - Get user information
-  - Update user information
-  - Delete users
-- **JWT Support:**
-  - Uses JSON Web Tokens for access-token authentication
-- **Argon2id Passwords:**
-  - Password hashing with memory-hard Argon2id
-- **Opaque Refresh Tokens:**
-  - Refresh tokens are cryptographically random, stored only as HMAC digests
+## Highlights
 
-## Getting Started
+- **Argon2id passwords** — memory-hard password hashing with explicit parameters.
+- **JWT access tokens** — short-lived tokens for authenticated API requests.
+- **Opaque refresh tokens** — cryptographically random values with only HMAC-SHA-256 digests stored in PostgreSQL.
+- **Refresh rotation and replay detection** — one-time refresh tokens with family-wide revocation.
+- **Secure cookies** — HttpOnly, SameSite=Lax, and Secure in production.
+- **OAuth login** — GitHub and Google providers.
+- **Email workflows** — verification and password-reset flows.
+- **Integration-ready CI** — PostgreSQL-backed tests run separately from the unit suite.
+
+## Quick start
 
 ### Prerequisites
 
-- Go 1.16+
-- PostgreSQL
-- Git
+- Go 1.25+
+- Docker and Docker Compose
+- PostgreSQL, or the included Compose database
+- `migrate` CLI for integration tests and migrations
 
-### Installation
+### Run locally
 
-1.  Clone the repository:
-    ```sh
-    git clone https://github.com/Jonathan0823/auth-go.git
-    ```
-2.  Install dependencies:
-    ```sh
-    go mod tidy
-    ```
-3.  Set up the database:
-    - Create a PostgreSQL database
-    - Set the environment variables in a `.env` file (see Configuration section)
-4.  Run the application:
-    ```sh
-    go run main.go
-    ```
+```bash
+git clone https://github.com/Jonathan0823/auth-go.git
+cd auth-go
+cp .env.example .env
 
-## Usage
+go mod download
+docker compose up -d db
+make migrate-up
+make run
+```
 
-The application exposes a RESTful API for user authentication and management.
-
-### API Endpoints
-
-- `POST /api/auth/register`: Register a new user
-- `POST /api/auth/login`: Login with email and password
-- `POST /api/auth/logout`: Logout the current user
-- `POST /api/auth/refresh`: Refresh the JWT token
-- `POST /api/auth/forgot-password`: Request a password reset
-- `POST /api/auth/reset-password`: Reset the password
-- `GET /api/auth/verify/email`: Verify the user's email
-- `POST /api/auth/verify/email/resend`: Resend the email verification link
-- `GET /api/auth/:provider`: Initiate OAuth 2.0 login with a provider
-- `GET /api/auth/:provider/callback`: Handle the OAuth 2.0 callback
-- `GET /api/user/me`: Get the current user's information
-- `GET /api/user/:id`: Get user information by ID
-- `GET /api/user/get-all`: Get all users
-- `GET /api/user/email`: Get user information by email
-- `PATCH /api/user/update`: Update the current user's information
-- `DELETE /api/user/delete/:id`: Delete a user by ID
+The API starts on `http://localhost:8080` by default.
 
 ## Configuration
 
-The application is configured using environment variables. Create a `.env` file in the root of the project with the following variables:
+The application uses one PostgreSQL connection string everywhere: `DATABASE_URL`.
+
+Start from `.env.example` and set at least:
 
 ```dotenv
-DATABASE_URL=postgres://your_db_user:your_db_password@localhost:5432/your_db_name?sslmode=disable
-
-PORT=8080
-
-JWT_ACCESS_SECRET=your_jwt_access_secret
-REFRESH_TOKEN_HASH_KEY=your_refresh_token_hash_key
-
-ALLOWED_ORIGINS=http://localhost:3000
-
-EMAIL=your_email_service
-PASSWORD=your_email_password
-
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_gihub_client_secret
-
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client-secret
-BASE_URL=http://localhost:8080
-
-SESSION_SECRET=your_session_secret
-ENVIRONMENT=development
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
+JWT_ACCESS_SECRET=replace-with-a-long-random-secret
+REFRESH_TOKEN_HASH_KEY=replace-with-a-separate-long-random-secret
+SESSION_SECRET=replace-with-a-long-random-secret
 ```
 
-## Dependencies
+OAuth and email variables are optional until those features are enabled:
 
-- [Gin](https://github.com/gin-gonic/gin): HTTP web framework
-- [pq](https://github.com/lib/pq): PostgreSQL driver
-- [jwt-go](https://github.com/golang-jwt/jwt): JSON Web Token implementation
-- [goth](https://github.com/markbates/goth): OAuth 2.0 library
-- [godotenv](https://github.com/joho/godotenv): Environment variable loader
-- [validator](https://github.com/go-playground/validator): Input validation
-- [sessions](https://github.com/gorilla/sessions): Session management
-- [gomail](https://github.com/go-gomail/gomail): Email sending
+```dotenv
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+EMAIL=
+PASSWORD=
+```
+
+`make` loads `.env` automatically. Use another file explicitly when needed:
+
+```bash
+ENV_FILE=.env.prod make run
+```
+
+## Database and tests
+
+```bash
+make migrate-up                         # Apply migrations
+make test                                # Unit tests
+make integration                         # Migrate + PostgreSQL integration tests
+make vet                                 # Static checks
+make sqlc                                # Regenerate PostgreSQL code
+```
+
+Integration tests use the `integration` build tag and require PostgreSQL:
+
+```bash
+go test -tags=integration ./...
+```
+
+## Authentication model
+
+1. A successful login returns a short-lived JWT access token and an opaque refresh token in secure cookies.
+2. Refresh tokens are random bearer values; no user data or JWT claims are embedded in them.
+3. Only an HMAC digest of a refresh token is persisted.
+4. Every refresh invalidates the previous token and issues a replacement.
+5. Reusing a rotated token revokes the entire refresh-token family.
+6. Access tokens remain stateless and expire after 15 minutes.
+
+> **Migration note:** The security migration invalidates existing JWT refresh sessions. Legacy bcrypt password hashes are not accepted; affected users must reset their password.
+
+## API overview
+
+### Authentication
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
+- `GET /api/auth/verify/email`
+- `POST /api/auth/verify/email/resend`
+
+### OAuth
+
+- `GET /api/oauth/:provider/`
+- `GET /api/oauth/:provider/callback`
+
+Supported providers: GitHub and Google.
+
+### Users
+
+- `GET /api/user/me`
+- `GET /api/user/:id`
+- `GET /api/user/get-all`
+- `GET /api/user/email`
+- `PATCH /api/user/update`
+- `DELETE /api/user/delete/:id`
+
+## Project structure
+
+```text
+cmd/       application entrypoint
+internal/
+  core/    domain models, ports, and services
+  adapter/ HTTP, PostgreSQL, JWT, password, OAuth, and email adapters
+  platform/ configuration, database, logging, and server setup
+migrations/ PostgreSQL schema migrations
+```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
