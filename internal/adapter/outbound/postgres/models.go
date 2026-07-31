@@ -16,16 +16,18 @@ type ForgotPasswordEmail struct {
 	CreatedAt pgtype.Timestamp
 }
 
-type TokenLog struct {
-	ID               pgtype.UUID
-	UserID           int32
-	Jti              string
-	RefreshedFromJti pgtype.Text
-	InvalidatedAt    pgtype.Timestamp
-	ExpiredAt        pgtype.Timestamp
-	CreatedAt        pgtype.Timestamp
-	IpAddress        string
-	UserAgent        string
+type RefreshToken struct {
+	ID        pgtype.UUID
+	UserID    int32
+	TokenHash []byte
+	FamilyID  pgtype.UUID
+	ParentID  pgtype.UUID
+	ExpiredAt pgtype.Timestamp
+	UsedAt    pgtype.Timestamp
+	RevokedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamp
+	IpAddress string
+	UserAgent string
 }
 
 type User struct {

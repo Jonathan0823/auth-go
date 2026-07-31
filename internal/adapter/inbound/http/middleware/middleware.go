@@ -26,7 +26,7 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		claims, err := m.Tokens.ValidateToken(token, "access")
+		claims, err := m.Tokens.ValidateAccessToken(token)
 		if err != nil {
 			c.Error(fmt.Errorf("invalid access token: %w", domain.ErrUnauthenticated))
 			c.Abort()

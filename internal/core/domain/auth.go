@@ -22,14 +22,16 @@ type ForgotPassword struct {
 	CreatedAt time.Time
 }
 
-type TokenLog struct {
-	ID               uuid.UUID
-	UserID           int
-	JTI              string
-	RefreshedFromJTI *string
-	InvalidatedAt    *time.Time
-	ExpiredAt        time.Time
-	CreatedAt        time.Time
-	IPAddress        string
-	UserAgent        string
+type RefreshToken struct {
+	ID        uuid.UUID
+	UserID    int
+	TokenHash []byte
+	FamilyID  uuid.UUID
+	ParentID  *uuid.UUID
+	ExpiredAt time.Time
+	UsedAt    *time.Time
+	RevokedAt *time.Time
+	CreatedAt time.Time
+	IPAddress string
+	UserAgent string
 }

@@ -15,8 +15,7 @@ type AuthService interface {
 	VerifyEmail(ctx context.Context, id string) error
 	ResetPassword(ctx context.Context, tokenID, newPassword string) error
 	RefreshTokens(ctx context.Context, refreshToken, ip, userAgent string) (accessToken, refreshTokenNew string, err error)
-	InvalidateJWTTokens(ctx context.Context, oldJTI, newJTI string) error
-	IsTokenLogInvalidated(ctx context.Context, jti string) (bool, error)
+	Logout(ctx context.Context, refreshToken string) error
 }
 
 type UserService interface {

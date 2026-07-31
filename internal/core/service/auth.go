@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 	"github.com/Jonathan0823/auth-go/internal/core/port"
 )
+
+var ErrRefreshTokenReused = errors.New("refresh token reused")
 
 type authService struct {
 	repo    port.Repository
@@ -62,26 +65,31 @@ func (s *authService) Login(ctx context.Context, user domain.User) (string, stri
 	if err != nil {
 		return "", "", fmt.Errorf("generate access token: %w", err)
 	}
-	refreshToken, jtiRefresh, err := s.tokens.GenerateRefreshToken(*userFromDB)
+
+	rawRefresh, hmacHash, err := s.tokens.GenerateRefreshToken()
 	if err != nil {
 		return "", "", fmt.Errorf("generate refresh token: %w", err)
 	}
 
-	tokenLog := domain.TokenLog{
-		ID:               uuid.New(),
-		UserID:           userFromDB.ID,
-		JTI:              jtiRefresh,
-		RefreshedFromJTI: nil,
-		InvalidatedAt:    nil,
-		ExpiredAt:        time.Now().Add(7 * 24 * time.Hour),
-		CreatedAt:        time.Now(),
-		IPAddress:        user.IPAddress,
-		UserAgent:        user.UserAgent,
+	familyID := uuid.New()
+	now := time.Now()
+
+	rt := domain.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    userFromDB.ID,
+		TokenHash: hmacHash,
+		FamilyID:  familyID,
+		ParentID:  nil,
+		ExpiredAt: now.Add(7 * 24 * time.Hour),
+		CreatedAt: now,
+		IPAddress: user.IPAddress,
+		UserAgent: user.UserAgent,
 	}
-	if err := s.repo.Auth().CreateTokenLog(ctx, tokenLog); err != nil {
-		return "", "", fmt.Errorf("create token log: %w", err)
+	if err := s.repo.Auth().CreateRefreshToken(ctx, rt); err != nil {
+		return "", "", fmt.Errorf("create refresh token: %w", err)
 	}
-	return accessToken, refreshToken, nil
+
+	return accessToken, rawRefresh, nil
 }
 
 func (s *authService) CreateVerifyEmail(ctx context.Context, email string) error {
@@ -188,61 +196,107 @@ func (s *authService) ResetPassword(ctx context.Context, tokenID, newPassword st
 }
 
 func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userAgent string) (string, string, error) {
-	claims, err := s.tokens.ValidateToken(refreshToken, "refresh")
+	hash, err := s.tokens.HashRefreshToken(refreshToken)
 	if err != nil {
-		return "", "", fmt.Errorf("invalid refresh token: %w", domain.ErrUnauthenticated)
+		return "", "", fmt.Errorf("hash refresh token: %w", err)
 	}
 
-	oldJTI, ok := claims["jti"].(string)
-	if !ok {
-		return "", "", fmt.Errorf("refresh token missing jti: %w", domain.ErrUnauthenticated)
+	var userID int
+	var newRawToken string
+
+	err = s.repo.WithTx(ctx, func(u port.UnitOfWork) error {
+		token, err := u.Auth().GetRefreshTokenByHash(ctx, hash)
+		if err != nil {
+			return fmt.Errorf("get refresh token: %w", err)
+		}
+		if token == nil {
+			return fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated)
+		}
+		if time.Now().After(token.ExpiredAt) {
+			return fmt.Errorf("refresh token expired: %w", domain.ErrUnauthenticated)
+		}
+		if token.RevokedAt != nil {
+			return fmt.Errorf("refresh token revoked: %w", domain.ErrUnauthenticated)
+		}
+
+		if token.UsedAt != nil {
+			if err := u.Auth().RevokeRefreshTokenFamily(ctx, token.FamilyID); err != nil {
+				return fmt.Errorf("revoke token family: %w", err)
+			}
+			if err := u.Commit(); err != nil {
+				return fmt.Errorf("commit revocation: %w", err)
+			}
+			return ErrRefreshTokenReused
+		}
+
+		if err := u.Auth().UseRefreshToken(ctx, token.ID); err != nil {
+			return fmt.Errorf("use refresh token: %w", err)
+		}
+
+		raw, hmac, err := s.tokens.GenerateRefreshToken()
+		if err != nil {
+			return fmt.Errorf("generate refresh token: %w", err)
+		}
+		newRawToken = raw
+		userID = token.UserID
+
+		now := time.Now()
+		newRT := domain.RefreshToken{
+			ID:        uuid.New(),
+			UserID:    token.UserID,
+			TokenHash: hmac,
+			FamilyID:  token.FamilyID,
+			ParentID:  &token.ID,
+			ExpiredAt: now.Add(7 * 24 * time.Hour),
+			CreatedAt: now,
+			IPAddress: ip,
+			UserAgent: userAgent,
+		}
+		if err := u.Auth().CreateRefreshToken(ctx, newRT); err != nil {
+			return fmt.Errorf("create new refresh token: %w", err)
+		}
+		return nil
+	})
+
+	if errors.Is(err, ErrRefreshTokenReused) {
+		return "", "", fmt.Errorf("refresh token reused: %w", domain.ErrUnauthenticated)
 	}
-	isInvalidated, err := s.IsTokenLogInvalidated(ctx, oldJTI)
 	if err != nil {
 		return "", "", err
 	}
-	if isInvalidated {
-		return "", "", fmt.Errorf("refresh token invalidated: %w", domain.ErrUnauthenticated)
+
+	userFromDB, err := s.repo.Users().GetByID(ctx, userID)
+	if err != nil {
+		return "", "", fmt.Errorf("get user: %w", err)
+	}
+	if userFromDB == nil {
+		return "", "", fmt.Errorf("user not found: %w", domain.ErrNotFound)
 	}
 
-	username, okUsername := claims["username"].(string)
-	email, okEmail := claims["email"].(string)
-	if !okUsername || !okEmail {
-		return "", "", fmt.Errorf("refresh token claims invalid: %w", domain.ErrUnauthenticated)
-	}
-	user := domain.User{Username: username, Email: email, IPAddress: ip, UserAgent: userAgent}
-
-	newAccessToken, _, err := s.tokens.GenerateAccessToken(user)
+	accessToken, _, err := s.tokens.GenerateAccessToken(*userFromDB)
 	if err != nil {
 		return "", "", fmt.Errorf("generate access token: %w", err)
 	}
-	newRefreshToken, newJTI, err := s.tokens.GenerateRefreshToken(user)
-	if err != nil {
-		return "", "", fmt.Errorf("generate refresh token: %w", err)
-	}
-	if err := s.InvalidateJWTTokens(ctx, oldJTI, newJTI); err != nil {
-		return "", "", fmt.Errorf("invalidate old token: %w", err)
-	}
-	return newAccessToken, newRefreshToken, nil
+
+	return accessToken, newRawToken, nil
 }
 
-func (s *authService) InvalidateJWTTokens(ctx context.Context, oldJTI, newJTI string) error {
-	if oldJTI == "" {
-		return fmt.Errorf("old jti cannot be empty: %w", domain.ErrInvalidInput)
+func (s *authService) Logout(ctx context.Context, refreshToken string) error {
+	hash, err := s.tokens.HashRefreshToken(refreshToken)
+	if err != nil {
+		return fmt.Errorf("hash refresh token: %w", err)
 	}
-	if err := s.repo.Auth().InvalidateTokenLog(ctx, oldJTI, newJTI); err != nil {
-		return fmt.Errorf("invalidate token log: %w", err)
+
+	token, err := s.repo.Auth().GetRefreshTokenByHash(ctx, hash)
+	if err != nil {
+		return fmt.Errorf("get refresh token: %w", err)
+	}
+	if token == nil {
+		return nil
+	}
+
+	if err := s.repo.Auth().RevokeRefreshTokenFamily(ctx, token.FamilyID); err != nil {
+		return fmt.Errorf("revoke token family: %w", err)
 	}
 	return nil
-}
-
-func (s *authService) IsTokenLogInvalidated(ctx context.Context, jti string) (bool, error) {
-	if jti == "" {
-		return false, fmt.Errorf("jti cannot be empty: %w", domain.ErrInvalidInput)
-	}
-	invalidated, err := s.repo.Auth().IsTokenLogInvalidated(ctx, jti)
-	if err != nil {
-		return false, fmt.Errorf("check token invalidation: %w", err)
-	}
-	return invalidated, nil
 }

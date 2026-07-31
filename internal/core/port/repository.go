@@ -3,6 +3,8 @@ package port
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
@@ -23,10 +25,11 @@ type AuthRepository interface {
 	CreateForgotPasswordEmail(ctx context.Context, data domain.ForgotPassword) error
 	GetForgotPasswordByID(ctx context.Context, id string) (domain.ForgotPassword, error)
 	DeleteForgotPasswordByID(ctx context.Context, id string) error
-	CreateTokenLog(ctx context.Context, tokenLog domain.TokenLog) error
-	GetTokenLogByJTI(ctx context.Context, jti string) (domain.TokenLog, error)
-	InvalidateTokenLog(ctx context.Context, oldJTI, newJTI string) error
-	IsTokenLogInvalidated(ctx context.Context, jti string) (bool, error)
+	CreateRefreshToken(ctx context.Context, rt domain.RefreshToken) error
+	GetRefreshTokenByHash(ctx context.Context, hash []byte) (*domain.RefreshToken, error)
+	UseRefreshToken(ctx context.Context, id uuid.UUID) error
+	RevokeRefreshToken(ctx context.Context, id uuid.UUID) error
+	RevokeRefreshTokenFamily(ctx context.Context, familyID uuid.UUID) error
 }
 
 type UnitOfWork interface {

@@ -68,24 +68,26 @@ WHERE forgot_password_emails.id = $1;
 DELETE FROM forgot_password_emails
 WHERE forgot_password_emails.id = $1;
 
--- name: CreateTokenLog :exec
-INSERT INTO token_log (id, user_id, jti, refreshed_from_jti, invalidated_at, expired_at, created_at, ip_address, user_agent)
+-- name: CreateRefreshToken :exec
+INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, parent_id, expired_at, created_at, ip_address, user_agent)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
--- name: GetTokenLogByJTI :one
-SELECT token_log.id, token_log.user_id, token_log.jti, token_log.refreshed_from_jti, token_log.invalidated_at, token_log.expired_at, token_log.created_at, token_log.ip_address, token_log.user_agent
-FROM token_log
-WHERE token_log.jti = $1;
+-- name: GetRefreshTokenByHash :one
+SELECT id, user_id, token_hash, family_id, parent_id, expired_at, used_at, revoked_at, created_at, ip_address, user_agent
+FROM refresh_tokens
+WHERE token_hash = $1;
 
--- name: InvalidateTokenLog :exec
-UPDATE token_log
-SET invalidated_at = NOW()
-WHERE token_log.jti = $1;
+-- name: UseRefreshToken :exec
+UPDATE refresh_tokens
+SET used_at = NOW()
+WHERE id = $1 AND used_at IS NULL;
 
--- name: InvalidateAndRefreshTokenLog :exec
-UPDATE token_log
-SET invalidated_at = NOW(), refreshed_from_jti = $2
-WHERE token_log.jti = $1;
+-- name: RevokeRefreshToken :exec
+UPDATE refresh_tokens
+SET revoked_at = NOW()
+WHERE id = $1;
 
--- name: IsTokenLogInvalidated :one
-SELECT EXISTS(SELECT 1 FROM token_log WHERE token_log.jti = $1 AND token_log.invalidated_at IS NOT NULL) AS invalidated;
+-- name: RevokeRefreshTokenFamily :exec
+UPDATE refresh_tokens
+SET revoked_at = NOW()
+WHERE family_id = $1 AND revoked_at IS NULL;

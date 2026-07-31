@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(100) NOT NULL,
     avatar_url VARCHAR(255),
     email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(100) NOT NULL,
+    password VARCHAR(255) NOT NULL,
     is_verified BOOLEAN DEFAULT FALSE,
     provider VARCHAR(50) DEFAULT 'local',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -27,18 +27,20 @@ CREATE TABLE IF NOT EXISTS forgot_password_emails (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS token_log (
+CREATE TABLE IF NOT EXISTS refresh_tokens (
     id UUID PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    jti VARCHAR(100) NOT NULL UNIQUE,
-    refreshed_from_jti VARCHAR(100),
-    invalidated_at TIMESTAMP,
+    token_hash BYTEA NOT NULL UNIQUE,
+    family_id UUID NOT NULL,
+    parent_id UUID REFERENCES refresh_tokens(id),
     expired_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    used_at TIMESTAMP,
+    revoked_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ip_address VARCHAR(45) NOT NULL,
-    user_agent TEXT NOT NULL,
-    FOREIGN KEY (refreshed_from_jti) REFERENCES token_log(jti)
+    user_agent TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_token_log_user_id ON token_log(user_id);
-CREATE INDEX IF NOT EXISTS idx_token_log_jti ON token_log(jti);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_family_id ON refresh_tokens(family_id);

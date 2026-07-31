@@ -33,30 +33,30 @@ func (q *Queries) CreateForgotPasswordEmail(ctx context.Context, arg CreateForgo
 	return err
 }
 
-const createTokenLog = `-- name: CreateTokenLog :exec
-INSERT INTO token_log (id, user_id, jti, refreshed_from_jti, invalidated_at, expired_at, created_at, ip_address, user_agent)
+const createRefreshToken = `-- name: CreateRefreshToken :exec
+INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, parent_id, expired_at, created_at, ip_address, user_agent)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
-type CreateTokenLogParams struct {
-	ID               pgtype.UUID
-	UserID           int32
-	Jti              string
-	RefreshedFromJti pgtype.Text
-	InvalidatedAt    pgtype.Timestamp
-	ExpiredAt        pgtype.Timestamp
-	CreatedAt        pgtype.Timestamp
-	IpAddress        string
-	UserAgent        string
+type CreateRefreshTokenParams struct {
+	ID        pgtype.UUID
+	UserID    int32
+	TokenHash []byte
+	FamilyID  pgtype.UUID
+	ParentID  pgtype.UUID
+	ExpiredAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamp
+	IpAddress string
+	UserAgent string
 }
 
-func (q *Queries) CreateTokenLog(ctx context.Context, arg CreateTokenLogParams) error {
-	_, err := q.db.Exec(ctx, createTokenLog,
+func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error {
+	_, err := q.db.Exec(ctx, createRefreshToken,
 		arg.ID,
 		arg.UserID,
-		arg.Jti,
-		arg.RefreshedFromJti,
-		arg.InvalidatedAt,
+		arg.TokenHash,
+		arg.FamilyID,
+		arg.ParentID,
 		arg.ExpiredAt,
 		arg.CreatedAt,
 		arg.IpAddress,
@@ -193,22 +193,24 @@ func (q *Queries) GetForgotPasswordByID(ctx context.Context, id pgtype.UUID) (Ge
 	return i, err
 }
 
-const getTokenLogByJTI = `-- name: GetTokenLogByJTI :one
-SELECT token_log.id, token_log.user_id, token_log.jti, token_log.refreshed_from_jti, token_log.invalidated_at, token_log.expired_at, token_log.created_at, token_log.ip_address, token_log.user_agent
-FROM token_log
-WHERE token_log.jti = $1
+const getRefreshTokenByHash = `-- name: GetRefreshTokenByHash :one
+SELECT id, user_id, token_hash, family_id, parent_id, expired_at, used_at, revoked_at, created_at, ip_address, user_agent
+FROM refresh_tokens
+WHERE token_hash = $1
 `
 
-func (q *Queries) GetTokenLogByJTI(ctx context.Context, jti string) (TokenLog, error) {
-	row := q.db.QueryRow(ctx, getTokenLogByJTI, jti)
-	var i TokenLog
+func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash []byte) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, getRefreshTokenByHash, tokenHash)
+	var i RefreshToken
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.Jti,
-		&i.RefreshedFromJti,
-		&i.InvalidatedAt,
+		&i.TokenHash,
+		&i.FamilyID,
+		&i.ParentID,
 		&i.ExpiredAt,
+		&i.UsedAt,
+		&i.RevokedAt,
 		&i.CreatedAt,
 		&i.IpAddress,
 		&i.UserAgent,
@@ -324,42 +326,26 @@ func (q *Queries) GetVerifyEmailByID(ctx context.Context, id pgtype.UUID) (GetVe
 	return i, err
 }
 
-const invalidateAndRefreshTokenLog = `-- name: InvalidateAndRefreshTokenLog :exec
-UPDATE token_log
-SET invalidated_at = NOW(), refreshed_from_jti = $2
-WHERE token_log.jti = $1
+const revokeRefreshToken = `-- name: RevokeRefreshToken :exec
+UPDATE refresh_tokens
+SET revoked_at = NOW()
+WHERE id = $1
 `
 
-type InvalidateAndRefreshTokenLogParams struct {
-	Jti              string
-	RefreshedFromJti pgtype.Text
-}
-
-func (q *Queries) InvalidateAndRefreshTokenLog(ctx context.Context, arg InvalidateAndRefreshTokenLogParams) error {
-	_, err := q.db.Exec(ctx, invalidateAndRefreshTokenLog, arg.Jti, arg.RefreshedFromJti)
+func (q *Queries) RevokeRefreshToken(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, revokeRefreshToken, id)
 	return err
 }
 
-const invalidateTokenLog = `-- name: InvalidateTokenLog :exec
-UPDATE token_log
-SET invalidated_at = NOW()
-WHERE token_log.jti = $1
+const revokeRefreshTokenFamily = `-- name: RevokeRefreshTokenFamily :exec
+UPDATE refresh_tokens
+SET revoked_at = NOW()
+WHERE family_id = $1 AND revoked_at IS NULL
 `
 
-func (q *Queries) InvalidateTokenLog(ctx context.Context, jti string) error {
-	_, err := q.db.Exec(ctx, invalidateTokenLog, jti)
+func (q *Queries) RevokeRefreshTokenFamily(ctx context.Context, familyID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, revokeRefreshTokenFamily, familyID)
 	return err
-}
-
-const isTokenLogInvalidated = `-- name: IsTokenLogInvalidated :one
-SELECT EXISTS(SELECT 1 FROM token_log WHERE token_log.jti = $1 AND token_log.invalidated_at IS NOT NULL) AS invalidated
-`
-
-func (q *Queries) IsTokenLogInvalidated(ctx context.Context, jti string) (bool, error) {
-	row := q.db.QueryRow(ctx, isTokenLogInvalidated, jti)
-	var invalidated bool
-	err := row.Scan(&invalidated)
-	return invalidated, err
 }
 
 const updateUser = `-- name: UpdateUser :exec
@@ -392,6 +378,17 @@ type UpdateUserPasswordParams struct {
 
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
 	_, err := q.db.Exec(ctx, updateUserPassword, arg.Password, arg.ID)
+	return err
+}
+
+const useRefreshToken = `-- name: UseRefreshToken :exec
+UPDATE refresh_tokens
+SET used_at = NOW()
+WHERE id = $1 AND used_at IS NULL
+`
+
+func (q *Queries) UseRefreshToken(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, useRefreshToken, id)
 	return err
 }
 
