@@ -39,6 +39,8 @@ make run
 
 The API starts on `http://localhost:8080` by default.
 
+With `ENABLE_SWAGGER=true` outside production, interactive API documentation is available at [`http://localhost:8080/swagger/index.html`](http://localhost:8080/swagger/index.html). The generated Swagger 2.0 document is served at `/swagger/doc.json`.
+
 ## Configuration
 
 The application uses one PostgreSQL connection string everywhere: `DATABASE_URL`.
@@ -49,6 +51,7 @@ Start from `.env.example` and set at least:
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
 JWT_ACCESS_SECRET=replace-with-a-long-random-secret
 REFRESH_TOKEN_HASH_KEY=replace-with-a-separate-long-random-secret
+ENABLE_SWAGGER=true
 SESSION_SECRET=replace-with-a-long-random-secret
 ```
 
@@ -77,6 +80,8 @@ make test                                # Unit tests
 make integration                         # Migrate + PostgreSQL integration tests
 make vet                                 # Static checks
 make sqlc                                # Regenerate PostgreSQL code
+make swagger                             # Regenerate Swagger artifacts
+make swagger-validate                    # Validate the Swagger document
 ```
 
 Integration tests use the `integration` build tag and require PostgreSQL:
@@ -95,6 +100,17 @@ go test -tags=integration ./...
 6. Access tokens remain stateless and expire after 15 minutes.
 
 > **Migration note:** The security migration invalidates existing JWT refresh sessions. Legacy bcrypt password hashes are not accepted; affected users must reset their password.
+
+## API documentation
+
+Swagger documentation is generated from Go annotations and committed under `docs/`. To regenerate it after changing a handler contract:
+
+```bash
+make swagger
+make swagger-validate
+```
+
+Swagger UI is opt-in and development-only. Set `ENABLE_SWAGGER=true` locally; it remains disabled whenever `ENVIRONMENT=production`.
 
 ## API overview
 
@@ -129,6 +145,7 @@ Supported providers: GitHub and Google.
 
 ```text
 cmd/       application entrypoint
+docs/      generated Swagger specification and registration
 internal/
   core/    domain models, ports, and services
   adapter/ HTTP, PostgreSQL, JWT, password, OAuth, and email adapters
