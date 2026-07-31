@@ -112,6 +112,9 @@ jobs:
       - name: Test unit suite
         run: go test ./...
 
+      - name: Test race detector
+        run: go test -race ./...
+
   integration:
     runs-on: ubuntu-latest
     services:
@@ -125,6 +128,15 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 3s
           --health-timeout 3s
           --health-retries 5
@@ -159,6 +171,9 @@ jobs:
       - name: Run integration tests
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
+          REDIS_ADDR: localhost:6379
+          REDIS_PASSWORD: ""
+          REDIS_DB: "0"
           JWT_ACCESS_SECRET: ci-test-access-secret
           REFRESH_TOKEN_HASH_KEY: ci-test-refresh-hash-key
           ENVIRONMENT: test
