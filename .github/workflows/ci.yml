@@ -76,17 +76,17 @@ jobs:
       - name: Run migrations
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
-        run: |
-          migrate -path migrations -database "$DATABASE_URL" up
+        run: make migrate-up
 
       - name: Test
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
           JWT_ACCESS_SECRET: ci-test-access-secret
           REFRESH_TOKEN_HASH_KEY: ci-test-refresh-hash-key
+          REQUIRE_INTEGRATION_TESTS: "1"
           ENVIRONMENT: test
           DOMAIN: localhost
-        run: go test ./...
+        run: make test
 
   build:
     runs-on: ubuntu-latest

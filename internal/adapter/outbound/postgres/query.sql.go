@@ -197,6 +197,7 @@ const getRefreshTokenByHash = `-- name: GetRefreshTokenByHash :one
 SELECT id, user_id, token_hash, family_id, parent_id, expired_at, used_at, revoked_at, created_at, ip_address, user_agent
 FROM refresh_tokens
 WHERE token_hash = $1
+FOR UPDATE
 `
 
 func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash []byte) (RefreshToken, error) {
