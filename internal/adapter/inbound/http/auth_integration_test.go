@@ -1,3 +1,5 @@
+//go:build integration
+
 package http_test
 
 import (
@@ -34,10 +36,7 @@ func setupAuthServer(t *testing.T) (*gin.Engine, *pgxpool.Pool, port.Repository,
 	t.Helper()
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		if os.Getenv("REQUIRE_INTEGRATION_TESTS") == "1" {
-			t.Fatal("DATABASE_URL is required for integration tests")
-		}
-		t.Skip("DATABASE_URL not set")
+		t.Fatal("DATABASE_URL is required for integration tests")
 	}
 
 	pool, err := pgxpool.New(context.Background(), dsn)

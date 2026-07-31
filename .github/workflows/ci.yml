@@ -44,6 +44,20 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Test unit suite
+        run: go test ./...
+
+  integration:
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:16-alpine
@@ -73,20 +87,14 @@ jobs:
           curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.2/migrate.linux-amd64.tar.gz | tar xvz
           sudo mv migrate /usr/local/bin/migrate
 
-      - name: Run migrations
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
-        run: make migrate-up
-
-      - name: Test
+      - name: Run integration tests
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
           JWT_ACCESS_SECRET: ci-test-access-secret
           REFRESH_TOKEN_HASH_KEY: ci-test-refresh-hash-key
-          REQUIRE_INTEGRATION_TESTS: "1"
           ENVIRONMENT: test
           DOMAIN: localhost
-        run: make test
+        run: make integration
 
   build:
     runs-on: ubuntu-latest

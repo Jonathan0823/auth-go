@@ -1,3 +1,5 @@
+//go:build integration
+
 package postgres_test
 
 import (
@@ -18,7 +20,7 @@ func connectPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		t.Skip("DATABASE_URL not set")
+		t.Fatal("DATABASE_URL is required for integration tests")
 	}
 	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {

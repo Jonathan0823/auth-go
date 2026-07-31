@@ -9,13 +9,17 @@ endif
 MIGRATE_DIR ?= migrations
 MIGRATE ?= migrate
 
-.PHONY: build test vet run sqlc migrate-up migrate-down migrate-down-1 fmt
+.PHONY: build test integration vet run sqlc migrate-up migrate-down migrate-down-1 fmt
 
 build:
 	go build ./cmd/auth-go
 
 test:
 	go test ./...
+
+integration:
+	$(MAKE) migrate-up
+	go test -tags=integration ./...
 
 vet:
 	go vet ./...
