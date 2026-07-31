@@ -92,6 +92,12 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
+	if !h.allowRateLimit(c,
+		ipRateLimit("register_ip", c),
+		emailRateLimit("register_email", req.Email),
+	) {
+		return
+	}
 	user := domain.User{Email: req.Email, Password: req.Password}
 	if err := h.Svc.Auth.Register(ctx, user); err != nil {
 		h.auditFailure(c, platform.EventUserRegister, "", err, 0)
@@ -126,6 +132,12 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	if !h.allowRateLimit(c,
+		ipRateLimit("login_ip", c),
+		emailRateLimit("login_account", req.Email),
+	) {
+		return
+	}
 	user := domain.User{
 		Email:     req.Email,
 		Password:  req.Password,
@@ -139,6 +151,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	h.resetRateLimit(c, emailRateLimit("login_account", req.Email))
 	h.auditSuccess(c, platform.EventAuthLogin, "", 0)
 	setAccessCookie(c, accessToken)
 	setRefreshCookie(c, refreshToken)
@@ -195,6 +208,9 @@ func (h *Handler) Logout(c *gin.Context) {
 func (h *Handler) Refresh(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
+	if !h.allowRateLimit(c, ipRateLimit("refresh_ip", c)) {
+		return
+	}
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
 		authErr := fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated)
@@ -261,6 +277,12 @@ func (h *Handler) ResendVerifyEmail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
 		return
 	}
+	if !h.allowRateLimit(c,
+		ipRateLimit("verify_ip", c),
+		emailRateLimit("verify_email", email),
+	) {
+		return
+	}
 	if err := h.Svc.Auth.CreateVerifyEmail(ctx, email); err != nil {
 		h.auditFailure(c, platform.EventAuthEmailVerification, "", err, 0)
 		c.Error(err)
@@ -289,6 +311,12 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 		h.audit(c, platform.EventAuthPasswordResetRequest, platform.OutcomeFailure, platform.ReasonValidation, "", 0)
 		return
 	}
+	if !h.allowRateLimit(c,
+		ipRateLimit("recovery_ip", c),
+		emailRateLimit("recovery_email", req.Email),
+	) {
+		return
+	}
 	if err := h.Svc.Auth.ForgotPassword(ctx, req.Email); err != nil {
 		h.auditFailure(c, platform.EventAuthPasswordResetRequest, "", err, 0)
 		c.Error(err)
@@ -315,6 +343,12 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	var req dto.ResetPasswordRequest
 	if !BindJSONWithValidation(c, &req) {
 		h.audit(c, platform.EventAuthPasswordReset, platform.OutcomeFailure, platform.ReasonValidation, "", 0)
+		return
+	}
+	if !h.allowRateLimit(c,
+		ipRateLimit("recovery_ip", c),
+		tokenRateLimit("recovery_token", req.ID),
+	) {
 		return
 	}
 	if err := h.Svc.Auth.ResetPassword(ctx, req.ID, req.Password); err != nil {
