@@ -17,7 +17,11 @@ This is a Go-based web application that provides user authentication and managem
   - Update user information
   - Delete users
 - **JWT Support:**
-  - Uses JSON Web Tokens for secure API authentication
+  - Uses JSON Web Tokens for access-token authentication
+- **Argon2id Passwords:**
+  - Password hashing with memory-hard Argon2id
+- **Opaque Refresh Tokens:**
+  - Refresh tokens are cryptographically random, stored only as HMAC digests
 
 ## Getting Started
 
@@ -83,7 +87,7 @@ DB_SSL=disable
 PORT=8080
 
 JWT_ACCESS_SECRET=your_jwt_access_secret
-JWT_REFRESH_SECRET=your_jwt_refresh_secret
+REFRESH_TOKEN_HASH_KEY=your_refresh_token_hash_key
 
 ALLOWED_ORIGINS=http://localhost:3000
 
