@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"strings"
 	"testing"
@@ -11,6 +12,30 @@ import (
 
 func newTestLogger(output *bytes.Buffer) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(output, nil))
+}
+
+func TestAuditLoggerRecordsRateLimitMetric(t *testing.T) {
+	metrics := NewMetrics(nil)
+	logger := NewAuditLogger(slog.New(slog.NewJSONHandler(io.Discard, nil)), metrics)
+	logger.Log(context.Background(), AuditEvent{
+		Name:    EventAuthRateLimited,
+		Outcome: OutcomeDetected,
+		Route:   "/api/auth/login",
+		Reason:  ReasonRateLimited,
+		Policy:  "login_ip",
+		Backend: "memory",
+	})
+
+	families, err := metrics.Registry.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, family := range families {
+		if family.GetName() == "auth_go_rate_limit_events_total" && len(family.GetMetric()) == 1 {
+			return
+		}
+	}
+	t.Fatal("rate-limit metric was not recorded")
 }
 
 func TestAuditLoggerUsesSafeFields(t *testing.T) {
@@ -26,6 +51,8 @@ func TestAuditLoggerUsesSafeFields(t *testing.T) {
 		UserID:    42,
 		Provider:  "github",
 		Reason:    ReasonReplayDetected,
+		Policy:    "login_ip",
+		Backend:   "memory",
 	})
 
 	var entry map[string]any
@@ -39,6 +66,8 @@ func TestAuditLoggerUsesSafeFields(t *testing.T) {
 		"user_id":    float64(42),
 		"provider":   "github",
 		"reason":     ReasonReplayDetected,
+		"policy":     "login_ip",
+		"backend":    "memory",
 	} {
 		if entry[key] != want {
 			t.Fatalf("%s = %v, want %v", key, entry[key], want)
