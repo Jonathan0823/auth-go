@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/core/port"
 )
 
-var ErrRefreshTokenReused = fmt.Errorf("refresh token reused")
+var ErrRefreshTokenReused = errors.New("refresh token reused")
 
 const (
 	errGetUserByEmail = "get user by email: %w"
@@ -220,7 +221,7 @@ func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userA
 		if err := s.revokeRefreshTokenFamily(ctx, tx, token.FamilyID); err != nil {
 			return "", "", err
 		}
-		return "", "", fmt.Errorf("refresh token reused: %w", domain.ErrUnauthenticated)
+		return "", "", fmt.Errorf("%w: %w", ErrRefreshTokenReused, domain.ErrUnauthenticated)
 	}
 
 	newRawToken, err := s.rotateRefreshToken(ctx, tx.Auth(), token, ip, userAgent)
