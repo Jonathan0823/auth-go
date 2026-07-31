@@ -8,14 +8,20 @@ MIGRATE_DIR ?= migrations
 MIGRATE ?= migrate
 SWAG_VERSION ?= v1.16.6
 REDOCLY_VERSION ?= v2.43.1
+COVERAGE_DIR ?= coverage
+COVERAGE_FILE ?= $(COVERAGE_DIR)/coverage.out
 
-.PHONY: build test integration vet run sqlc swagger swagger-validate migrate-up migrate-down migrate-down-1 fmt
+.PHONY: build test coverage integration vet run sqlc swagger swagger-validate migrate-up migrate-down migrate-down-1 fmt
 
 build:
 	go build ./cmd/auth-go
 
 test:
 	go test ./...
+
+coverage: migrate-up
+	mkdir -p "$(COVERAGE_DIR)"
+	go test -tags=integration ./... -covermode=atomic -coverprofile="$(COVERAGE_FILE)"
 
 integration:
 	$(MAKE) migrate-up

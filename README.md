@@ -32,7 +32,7 @@ cd auth-go
 cp .env.example .env
 
 go mod download
-docker compose up -d db
+docker compose up -d db redis
 make migrate-up
 make run
 ```
@@ -67,6 +67,8 @@ EMAIL=
 PASSWORD=
 ```
 
+Authentication rate limiting supports `memory`, `redis`, and `postgres` backends. Memory is intended for development or an explicitly approved single-instance deployment; production should use Redis or PostgreSQL. Set `RATE_LIMIT_KEY` to a separate secret and configure `TRUSTED_PROXIES` only for known proxy networks.
+
 `make` loads `.env` automatically. Use another file explicitly when needed:
 
 ```bash
@@ -78,14 +80,15 @@ ENV_FILE=.env.prod make run
 ```bash
 make migrate-up                         # Apply migrations
 make test                                # Unit tests
-make integration                         # Migrate + PostgreSQL integration tests
+make integration                         # Migrate + PostgreSQL/Redis integration tests
+make coverage                            # Integration tests + coverage/coverage.out
 make vet                                 # Static checks
 make sqlc                                # Regenerate PostgreSQL code
 make swagger                             # Regenerate Swagger artifacts
 make swagger-validate                    # Validate the Swagger document
 ```
 
-Integration tests use the `integration` build tag and require PostgreSQL:
+Integration tests use the `integration` build tag and require PostgreSQL. Redis-backed tests run when `REDIS_ADDR` is configured:
 
 ```bash
 go test -tags=integration ./...
@@ -97,6 +100,7 @@ go test -tags=integration ./...
 - `GET /health/ready` reports database readiness with a bounded PostgreSQL ping.
 - `GET /metrics` exposes Prometheus metrics only when `ENABLE_METRICS=true`; it is an operational endpoint and is intentionally excluded from Swagger.
 - Security audit events are emitted as structured JSON logs with request IDs and safe categorical context.
+- Rate-limit denials and backend failures use low-cardinality audit and Prometheus events without raw identifiers.
 
 Metrics labels use route templates and avoid user-controlled values. Restrict `/metrics` to trusted monitoring systems in production. Grafana, Loki, and tracing infrastructure are intentionally not bundled.
 

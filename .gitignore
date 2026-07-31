@@ -4,3 +4,4 @@ tasks/
 .pi/
 .scannerwork/
 auth-go
+coverage/
