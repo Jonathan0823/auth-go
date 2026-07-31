@@ -13,11 +13,14 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/markbates/goth v1.81.0
+	github.com/redis/go-redis/v9 v9.7.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )
+
+require github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

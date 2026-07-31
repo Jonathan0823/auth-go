@@ -16,6 +16,13 @@ type ForgotPasswordEmail struct {
 	CreatedAt pgtype.Timestamp
 }
 
+type RateLimitBucket struct {
+	KeyHash     string
+	Count       int64
+	WindowStart pgtype.Timestamptz
+	ExpiresAt   pgtype.Timestamptz
+}
+
 type RefreshToken struct {
 	ID        pgtype.UUID
 	UserID    int32
