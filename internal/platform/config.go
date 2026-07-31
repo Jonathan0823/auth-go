@@ -13,6 +13,7 @@ type Config struct {
 	GitHubClientSecret string
 	GoogleClientID     string
 	GoogleClientSecret string
+	EnableSwagger      bool
 }
 
 func LoadConfig() Config {
@@ -27,5 +28,6 @@ func LoadConfig() Config {
 		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		EnableSwagger:      os.Getenv("ENABLE_SWAGGER") == "true",
 	}
 }

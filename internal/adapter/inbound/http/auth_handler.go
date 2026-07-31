@@ -69,6 +69,19 @@ func cookieDomain() string {
 	return "localhost"
 }
 
+// Register creates a new user account and sends an email verification link.
+// @Summary Register a user
+// @ID register
+// @Description Creates a user with an Argon2id-hashed password.
+// @Tags authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.CredentialsRequest true "Registration credentials"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
@@ -85,6 +98,21 @@ func (h *Handler) Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 
+// Login authenticates a user and sets access and refresh token cookies.
+// @Summary Log in
+// @ID login
+// @Description Authenticates with email and password and sets HttpOnly access_token and refresh_token cookies.
+// @Tags authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.CredentialsRequest true "Login credentials"
+// @Success 200 {object} MessageResponse
+// @Header 200 {string} Set-Cookie "access_token=<jwt>; HttpOnly; SameSite=Lax"
+// @Header 200 {string} Set-Cookie "refresh_token=<opaque-token>; HttpOnly; SameSite=Lax"
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /api/auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
@@ -110,6 +138,18 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully"})
 }
 
+// Logout revokes the refresh-token family and clears authentication cookies.
+// @Summary Log out
+// @ID logout
+// @Tags authentication
+// @Produce json
+// @Security CookieAuth
+// @Success 200 {object} MessageResponse
+// @Header 200 {string} Set-Cookie "access_token=; Max-Age=0"
+// @Header 200 {string} Set-Cookie "refresh_token=; Max-Age=0"
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/auth/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
@@ -128,6 +168,19 @@ func (h *Handler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"})
 }
 
+// Refresh rotates the refresh token and sets a new access-token cookie.
+// @Summary Refresh tokens
+// @ID refreshTokens
+// @Description Consumes the refresh_token cookie once and rotates the refresh-token family.
+// @Tags authentication
+// @Produce json
+// @Security CookieAuth
+// @Success 200 {object} MessageResponse
+// @Header 200 {string} Set-Cookie "access_token=<jwt>; HttpOnly; SameSite=Lax"
+// @Header 200 {string} Set-Cookie "refresh_token=<opaque-token>; HttpOnly; SameSite=Lax"
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/auth/refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
@@ -148,6 +201,16 @@ func (h *Handler) Refresh(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Access token refreshed successfully"})
 }
 
+// VerifyEmail verifies an email address using the token in the query string.
+// @Summary Verify email
+// @ID verifyEmail
+// @Tags authentication
+// @Produce json
+// @Param id query string true "Email verification token"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /api/auth/verify/email [get]
 func (h *Handler) VerifyEmail(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
@@ -158,6 +221,16 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
 }
 
+// ResendVerifyEmail sends a new email verification link.
+// @Summary Resend email verification
+// @ID resendVerifyEmail
+// @Tags authentication
+// @Produce json
+// @Param email query string true "Email address"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /api/auth/verify/email/resend [post]
 func (h *Handler) ResendVerifyEmail(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
@@ -173,6 +246,17 @@ func (h *Handler) ResendVerifyEmail(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Verification email resent successfully"})
 }
 
+// ForgotPassword sends a password-reset link to an existing email address.
+// @Summary Request password reset
+// @ID forgotPassword
+// @Tags authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.ForgotPasswordRequest true "Email address"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /api/auth/forgot-password [post]
 func (h *Handler) ForgotPassword(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
@@ -187,6 +271,17 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset link sent to your email"})
 }
 
+// ResetPassword replaces a user's password with a valid reset token.
+// @Summary Reset password
+// @ID resetPassword
+// @Tags authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.ResetPasswordRequest true "Reset token and new password"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /api/auth/reset-password [post]
 func (h *Handler) ResetPassword(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()

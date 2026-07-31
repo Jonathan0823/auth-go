@@ -1,3 +1,16 @@
+// @title auth-go API
+// @version 1.0
+// @description Authentication and user management API with JWT access tokens and rotating refresh-token cookies.
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+// @securityDefinitions.apikey CookieAuth
+// @in header
+// @name Cookie
+// @description Send the access_token cookie for authenticated user endpoints.
+
 package main
 
 import (

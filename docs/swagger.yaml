@@ -1,0 +1,603 @@
+basePath: /
+definitions:
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.CredentialsRequest:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 100
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ForgotPasswordRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ResetPasswordRequest:
+    properties:
+      id:
+        type: string
+      password:
+        maxLength: 100
+        minLength: 8
+        type: string
+    required:
+    - id
+    - password
+    type: object
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UpdateUserRequest:
+    properties:
+      avatar_url:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      username:
+        maxLength: 30
+        minLength: 3
+        type: string
+    required:
+    - email
+    - id
+    type: object
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponse:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      is_verified:
+        type: boolean
+      oauth_id:
+        type: string
+      provider:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  internal_adapter_inbound_http.ErrorResponse:
+    properties:
+      error:
+        example: invalid input
+        type: string
+    type: object
+  internal_adapter_inbound_http.MessageResponse:
+    properties:
+      message:
+        example: Operation completed successfully
+        type: string
+    type: object
+  internal_adapter_inbound_http.UserResponseEnvelope:
+    properties:
+      message:
+        example: User retrieved successfully
+        type: string
+      user:
+        $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponse'
+    type: object
+  internal_adapter_inbound_http.UsersResponseEnvelope:
+    properties:
+      message:
+        example: Users retrieved successfully
+        type: string
+      users:
+        items:
+          $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponse'
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Authentication and user management API with JWT access tokens and rotating
+    refresh-token cookies.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: auth-go API
+  version: "1.0"
+paths:
+  /api/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      operationId: forgotPassword
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - authentication
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates with email and password and sets HttpOnly access_token
+        and refresh_token cookies.
+      operationId: login
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.CredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Set-Cookie:
+              description: refresh_token=<opaque-token>; HttpOnly; SameSite=Lax
+              type: string
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      summary: Log in
+      tags:
+      - authentication
+  /api/auth/logout:
+    post:
+      operationId: logout
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Set-Cookie:
+              description: refresh_token=; Max-Age=0
+              type: string
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Log out
+      tags:
+      - authentication
+  /api/auth/refresh:
+    post:
+      description: Consumes the refresh_token cookie once and rotates the refresh-token
+        family.
+      operationId: refreshTokens
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Set-Cookie:
+              description: refresh_token=<opaque-token>; HttpOnly; SameSite=Lax
+              type: string
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Refresh tokens
+      tags:
+      - authentication
+  /api/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a user with an Argon2id-hashed password.
+      operationId: register
+      parameters:
+      - description: Registration credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.CredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      summary: Register a user
+      tags:
+      - authentication
+  /api/auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      operationId: resetPassword
+      parameters:
+      - description: Reset token and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      summary: Reset password
+      tags:
+      - authentication
+  /api/auth/verify/email:
+    get:
+      operationId: verifyEmail
+      parameters:
+      - description: Email verification token
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      summary: Verify email
+      tags:
+      - authentication
+  /api/auth/verify/email/resend:
+    post:
+      operationId: resendVerifyEmail
+      parameters:
+      - description: Email address
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      summary: Resend email verification
+      tags:
+      - authentication
+  /api/oauth/{provider}/:
+    get:
+      operationId: oauthLogin
+      parameters:
+      - description: OAuth provider
+        enum:
+        - github
+        - google
+        in: path
+        name: provider
+        required: true
+        type: string
+      responses:
+        "302":
+          description: Found
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      summary: Start OAuth login
+      tags:
+      - oauth
+  /api/oauth/{provider}/callback:
+    get:
+      operationId: oauthCallback
+      parameters:
+      - description: OAuth provider
+        enum:
+        - github
+        - google
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.UserResponseEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      summary: Complete OAuth login
+      tags:
+      - oauth
+  /api/user/{id}:
+    get:
+      operationId: getUserByID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.UserResponseEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get user by ID
+      tags:
+      - users
+  /api/user/delete/{id}:
+    delete:
+      operationId: deleteUser
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete user
+      tags:
+      - users
+  /api/user/email:
+    get:
+      operationId: getUserByEmail
+      parameters:
+      - description: User email address
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.UserResponseEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get user by email
+      tags:
+      - users
+  /api/user/get-all:
+    get:
+      operationId: getAllUsers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.UsersResponseEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: List users
+      tags:
+      - users
+  /api/user/me:
+    get:
+      operationId: getCurrentUser
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.UserResponseEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get current user
+      tags:
+      - users
+  /api/user/update:
+    patch:
+      consumes:
+      - application/json
+      operationId: updateUser
+      parameters:
+      - description: Profile updates
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Update current user
+      tags:
+      - users
+schemes:
+- http
+- https
+securityDefinitions:
+  CookieAuth:
+    description: Send the access_token cookie for authenticated user endpoints.
+    in: header
+    name: Cookie
+    type: apiKey
+swagger: "2.0"

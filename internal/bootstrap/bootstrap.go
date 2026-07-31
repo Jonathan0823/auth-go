@@ -38,6 +38,7 @@ func Run(cfg platform.Config) {
 
 	handler := inhttp.NewHandler(svc, tokens)
 	inhttp.RegisterRoutes(r, handler, logger)
+	inhttp.RegisterSwaggerRoutes(r, cfg.EnableSwagger, cfg.Environment)
 
 	platform.InitServer(r, cfg)
 }
