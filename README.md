@@ -52,6 +52,7 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
 JWT_ACCESS_SECRET=replace-with-a-long-random-secret
 REFRESH_TOKEN_HASH_KEY=replace-with-a-separate-long-random-secret
 ENABLE_SWAGGER=true
+ENABLE_METRICS=false
 SESSION_SECRET=replace-with-a-long-random-secret
 ```
 
@@ -89,6 +90,15 @@ Integration tests use the `integration` build tag and require PostgreSQL:
 ```bash
 go test -tags=integration ./...
 ```
+
+## Observability
+
+- `GET /health/live` reports process liveness without checking PostgreSQL.
+- `GET /health/ready` reports database readiness with a bounded PostgreSQL ping.
+- `GET /metrics` exposes Prometheus metrics only when `ENABLE_METRICS=true`.
+- Security audit events are emitted as structured JSON logs with request IDs and safe categorical context.
+
+Metrics labels use route templates and avoid user-controlled values. Restrict `/metrics` to trusted monitoring systems in production. Grafana, Loki, and tracing infrastructure are intentionally not bundled.
 
 ## Authentication model
 
