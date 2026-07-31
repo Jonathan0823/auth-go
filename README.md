@@ -17,7 +17,11 @@ This is a Go-based web application that provides user authentication and managem
   - Update user information
   - Delete users
 - **JWT Support:**
-  - Uses JSON Web Tokens for secure API authentication
+  - Uses JSON Web Tokens for access-token authentication
+- **Argon2id Passwords:**
+  - Password hashing with memory-hard Argon2id
+- **Opaque Refresh Tokens:**
+  - Refresh tokens are cryptographically random, stored only as HMAC digests
 
 ## Getting Started
 
@@ -73,17 +77,12 @@ The application exposes a RESTful API for user authentication and management.
 The application is configured using environment variables. Create a `.env` file in the root of the project with the following variables:
 
 ```dotenv
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-DB_NAME=your_db_name
-DB_SSL=disable
+DATABASE_URL=postgres://your_db_user:your_db_password@localhost:5432/your_db_name?sslmode=disable
 
 PORT=8080
 
 JWT_ACCESS_SECRET=your_jwt_access_secret
-JWT_REFRESH_SECRET=your_jwt_refresh_secret
+REFRESH_TOKEN_HASH_KEY=your_refresh_token_hash_key
 
 ALLOWED_ORIGINS=http://localhost:3000
 

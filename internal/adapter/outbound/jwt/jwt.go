@@ -1,6 +1,10 @@
 package jwt
 
 import (
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -36,33 +40,10 @@ func (s *tokenService) GenerateAccessToken(user domain.User) (token, jti string,
 	return t, jti, err
 }
 
-func (s *tokenService) GenerateRefreshToken(user domain.User) (token, jti string, err error) {
-	secret := []byte(os.Getenv("JWT_REFRESH_SECRET"))
+func (s *tokenService) ValidateAccessToken(tokenString string) (map[string]interface{}, error) {
+	secret := []byte(os.Getenv("JWT_ACCESS_SECRET"))
 	if len(secret) == 0 {
-		log.Fatal("JWT_REFRESH_SECRET is not set")
-	}
-	jti = uuid.New().String()
-	claims := jwt.MapClaims{
-		"id":       user.ID,
-		"jti":      jti,
-		"username": user.Username,
-		"email":    user.Email,
-		"exp":      time.Now().Add(7 * 24 * time.Hour).Unix(),
-	}
-	t, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
-	return t, jti, err
-}
-
-func (s *tokenService) ValidateToken(tokenString, tokenType string) (map[string]interface{}, error) {
-	var secret []byte
-	switch tokenType {
-	case "access":
-		secret = []byte(os.Getenv("JWT_ACCESS_SECRET"))
-	case "refresh":
-		secret = []byte(os.Getenv("JWT_REFRESH_SECRET"))
-	}
-	if len(secret) == 0 {
-		log.Fatal("JWT secret key is not set")
+		log.Fatal("JWT_ACCESS_SECRET is not set")
 	}
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (any, error) {
@@ -80,30 +61,33 @@ func (s *tokenService) ValidateToken(tokenString, tokenType string) (map[string]
 	return claims, nil
 }
 
-// ValidateJWT is a standalone helper used by the HTTP middleware.
-func ValidateJWT(tokenString, tokenType string) (jwt.MapClaims, error) {
-	var secret []byte
-	switch tokenType {
-	case "access":
-		secret = []byte(os.Getenv("JWT_ACCESS_SECRET"))
-	case "refresh":
-		secret = []byte(os.Getenv("JWT_REFRESH_SECRET"))
+func (s *tokenService) GenerateRefreshToken() (rawToken string, hmacHash []byte, err error) {
+	key := []byte(os.Getenv("REFRESH_TOKEN_HASH_KEY"))
+	if len(key) == 0 {
+		log.Fatal("REFRESH_TOKEN_HASH_KEY is not set")
 	}
-	if len(secret) == 0 {
-		log.Fatal("JWT secret key is not set")
+
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", nil, fmt.Errorf("generate random: %w", err)
 	}
-	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (any, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
-		}
-		return secret, nil
-	})
-	if err != nil {
-		return nil, err
+
+	rawToken = base64.RawURLEncoding.EncodeToString(bytes)
+
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte(rawToken))
+	hmacHash = mac.Sum(nil)
+
+	return rawToken, hmacHash, nil
+}
+
+func (s *tokenService) HashRefreshToken(rawToken string) ([]byte, error) {
+	key := []byte(os.Getenv("REFRESH_TOKEN_HASH_KEY"))
+	if len(key) == 0 {
+		return nil, fmt.Errorf("REFRESH_TOKEN_HASH_KEY is not set")
 	}
-	if !token.Valid {
-		return nil, fmt.Errorf("invalid token")
-	}
-	return claims, nil
+
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte(rawToken))
+	return mac.Sum(nil), nil
 }

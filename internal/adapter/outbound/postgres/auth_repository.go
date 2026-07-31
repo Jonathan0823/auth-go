@@ -3,8 +3,11 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
@@ -91,47 +94,73 @@ func (r *authRepository) DeleteForgotPasswordByID(ctx context.Context, id string
 	return r.q.DeleteForgotPasswordByID(ctx, uid)
 }
 
-func (r *authRepository) CreateTokenLog(ctx context.Context, tl domain.TokenLog) error {
-	return r.q.CreateTokenLog(ctx, CreateTokenLogParams{
-		ID:               pgtypeUUID(tl.ID),
-		UserID:           int32(tl.UserID),
-		Jti:              tl.JTI,
-		RefreshedFromJti: pgtypeTextPtr(tl.RefreshedFromJTI),
-		InvalidatedAt:    pgtypeTimestampPtr(tl.InvalidatedAt),
-		ExpiredAt:        pgtypeTimestamp(tl.ExpiredAt),
-		CreatedAt:        pgtypeTimestamp(tl.CreatedAt),
-		IpAddress:        tl.IPAddress,
-		UserAgent:        tl.UserAgent,
+func (r *authRepository) CreateRefreshToken(ctx context.Context, rt domain.RefreshToken) error {
+	return r.q.CreateRefreshToken(ctx, CreateRefreshTokenParams{
+		ID:        pgtypeUUID(rt.ID),
+		UserID:    int32(rt.UserID),
+		TokenHash: rt.TokenHash,
+		FamilyID:  pgtypeUUID(rt.FamilyID),
+		ParentID:  pgtypeUUIDPtr(rt.ParentID),
+		ExpiredAt: pgtypeTimestamp(rt.ExpiredAt),
+		CreatedAt: pgtypeTimestamp(rt.CreatedAt),
+		IpAddress: rt.IPAddress,
+		UserAgent: rt.UserAgent,
 	})
 }
 
-func (r *authRepository) GetTokenLogByJTI(ctx context.Context, jti string) (domain.TokenLog, error) {
-	row, err := r.q.GetTokenLogByJTI(ctx, jti)
+func (r *authRepository) GetRefreshTokenByHash(ctx context.Context, hash []byte) (*domain.RefreshToken, error) {
+	row, err := r.q.GetRefreshTokenByHash(ctx, hash)
 	if err != nil {
-		return domain.TokenLog{}, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return domain.TokenLog{
-		ID:               row.ID.Bytes,
-		UserID:           int(row.UserID),
-		JTI:              row.Jti,
-		RefreshedFromJTI: textPtr(row.RefreshedFromJti),
-		ExpiredAt:        row.ExpiredAt.Time,
-		CreatedAt:        row.CreatedAt.Time,
-		IPAddress:        row.IpAddress,
-		UserAgent:        row.UserAgent,
+	return &domain.RefreshToken{
+		ID:        row.ID.Bytes,
+		UserID:    int(row.UserID),
+		TokenHash: row.TokenHash,
+		FamilyID:  row.FamilyID.Bytes,
+		ParentID:  uuidPtr(row.ParentID),
+		ExpiredAt: row.ExpiredAt.Time,
+		UsedAt:    timestampPtr(row.UsedAt),
+		RevokedAt: timestampPtr(row.RevokedAt),
+		CreatedAt: row.CreatedAt.Time,
+		IPAddress: row.IpAddress,
+		UserAgent: row.UserAgent,
 	}, nil
 }
 
-func (r *authRepository) InvalidateTokenLog(ctx context.Context, oldJTI, newJTI string) error {
-	if newJTI == "" {
-		return r.q.InvalidateTokenLog(ctx, oldJTI)
-	}
-	return r.q.InvalidateAndRefreshTokenLog(ctx, InvalidateAndRefreshTokenLogParams{
-		Jti:              oldJTI,
-		RefreshedFromJti: pgtypeText(newJTI),
-	})
+func (r *authRepository) UseRefreshToken(ctx context.Context, id uuid.UUID) error {
+	return r.q.UseRefreshToken(ctx, pgtypeUUID(id))
 }
 
-func (r *authRepository) IsTokenLogInvalidated(ctx context.Context, jti string) (bool, error) {
-	return r.q.IsTokenLogInvalidated(ctx, jti)
+func (r *authRepository) RevokeRefreshToken(ctx context.Context, id uuid.UUID) error {
+	return r.q.RevokeRefreshToken(ctx, pgtypeUUID(id))
+}
+
+func (r *authRepository) RevokeRefreshTokenFamily(ctx context.Context, familyID uuid.UUID) error {
+	return r.q.RevokeRefreshTokenFamily(ctx, pgtypeUUID(familyID))
+}
+
+func pgtypeUUIDPtr(id *uuid.UUID) pgtype.UUID {
+	if id == nil {
+		return pgtype.UUID{Valid: false}
+	}
+	return pgtype.UUID{Bytes: *id, Valid: true}
+}
+
+func uuidPtr(id pgtype.UUID) *uuid.UUID {
+	if !id.Valid {
+		return nil
+	}
+	u := uuid.UUID(id.Bytes)
+	return &u
+}
+
+func timestampPtr(t pgtype.Timestamp) *time.Time {
+	if !t.Valid {
+		return nil
+	}
+	return &t.Time
 }

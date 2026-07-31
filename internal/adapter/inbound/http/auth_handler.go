@@ -13,6 +13,62 @@ import (
 
 var secure = os.Getenv("ENVIRONMENT") == "production"
 
+const (
+	accessCookieMaxAge  = 15 * 60
+	refreshCookieMaxAge = 7 * 24 * 3600
+)
+
+func setAccessCookie(c *gin.Context, token string) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "access_token",
+		Value:    token,
+		MaxAge:   accessCookieMaxAge,
+		Path:     "/",
+		Domain:   cookieDomain(),
+		Secure:   secure,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func setRefreshCookie(c *gin.Context, token string) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    token,
+		MaxAge:   refreshCookieMaxAge,
+		Path:     "/",
+		Domain:   cookieDomain(),
+		Secure:   secure,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func clearCookies(c *gin.Context) {
+	clearCookie(c, "access_token")
+	clearCookie(c, "refresh_token")
+}
+
+func clearCookie(c *gin.Context, name string) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     name,
+		Value:    "",
+		MaxAge:   -1,
+		Path:     "/",
+		Domain:   cookieDomain(),
+		Secure:   secure,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func cookieDomain() string {
+	if d := os.Getenv("DOMAIN"); d != "" {
+		return d
+	}
+	return "localhost"
+}
+
 func (h *Handler) Register(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
@@ -49,12 +105,8 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	domain := os.Getenv("DOMAIN")
-	if domain == "" {
-		domain = "localhost"
-	}
-	c.SetCookie("access_token", accessToken, 7*24*3600, "/", domain, secure, false)
-	c.SetCookie("refresh_token", refreshToken, 7*24*3600, "/", domain, secure, true)
+	setAccessCookie(c, accessToken)
+	setRefreshCookie(c, refreshToken)
 	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully"})
 }
 
@@ -66,23 +118,13 @@ func (h *Handler) Logout(c *gin.Context) {
 		c.Error(fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated))
 		return
 	}
-	claims, err := h.Tokens.ValidateToken(refreshToken, "refresh")
-	if err != nil {
-		c.Error(fmt.Errorf("invalid refresh token: %w", domain.ErrUnauthenticated))
-		return
-	}
-	oldJTI, ok := claims["jti"].(string)
-	if !ok {
-		c.Error(fmt.Errorf("refresh token missing jti: %w", domain.ErrUnauthenticated))
-		return
-	}
-	if err := h.Svc.Auth.InvalidateJWTTokens(ctx, oldJTI, ""); err != nil {
+
+	if err := h.Svc.Auth.Logout(ctx, refreshToken); err != nil {
 		c.Error(err)
 		return
 	}
-	cookieDomain := os.Getenv("DOMAIN")
-	c.SetCookie("access_token", "", -1, "/", cookieDomain, secure, false)
-	c.SetCookie("refresh_token", "", -1, "/", cookieDomain, secure, true)
+
+	clearCookies(c)
 	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"})
 }
 
@@ -101,12 +143,8 @@ func (h *Handler) Refresh(c *gin.Context) {
 		return
 	}
 
-	cookieDomain := os.Getenv("DOMAIN")
-	if cookieDomain == "" {
-		cookieDomain = "localhost"
-	}
-	c.SetCookie("access_token", newAccess, 7*24*3600, "/", cookieDomain, secure, false)
-	c.SetCookie("refresh_token", newRefresh, 7*24*3600, "/", cookieDomain, secure, true)
+	setAccessCookie(c, newAccess)
+	setRefreshCookie(c, newRefresh)
 	c.JSON(http.StatusOK, gin.H{"message": "Access token refreshed successfully"})
 }
 
