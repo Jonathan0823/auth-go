@@ -38,6 +38,17 @@ func TestAuditLoggerRecordsRateLimitMetric(t *testing.T) {
 	t.Fatal("rate-limit metric was not recorded")
 }
 
+func TestMetricsNormalizesUnknownValues(t *testing.T) {
+	metrics := NewMetrics(nil)
+	metrics.RecordSecurityEvent("unknown", "unknown", "unknown", "unknown")
+	metrics.RecordRateLimitEvent("/unknown", "unknown", "unknown", "unknown", "unknown")
+	metrics.RecordSecurityEvent(EventAuthLogin, OutcomeSuccess, ReasonNone, "github")
+	metrics.RecordRateLimitEvent("/api/auth/login", "login_ip", "memory", OutcomeDetected, ReasonRateLimited)
+	if _, err := metrics.Registry.Gather(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestAuditLoggerUsesSafeFields(t *testing.T) {
 	var output bytes.Buffer
 	logger := NewAuditLogger(
