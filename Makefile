@@ -6,8 +6,10 @@ check-database-url = $(if $(strip $(DATABASE_URL)),,$(error DATABASE_URL must be
 
 MIGRATE_DIR ?= migrations
 MIGRATE ?= migrate
+SWAG_VERSION ?= v1.16.6
+REDOCLY_VERSION ?= v2.43.1
 
-.PHONY: build test integration vet run sqlc migrate-up migrate-down migrate-down-1 fmt
+.PHONY: build test integration vet run sqlc swagger swagger-validate migrate-up migrate-down migrate-down-1 fmt
 
 build:
 	go build ./cmd/auth-go
@@ -27,6 +29,12 @@ run:
 
 sqlc:
 	sqlc generate
+
+swagger:
+	go run github.com/swaggo/swag/cmd/swag@$(SWAG_VERSION) init -g cmd/auth-go/main.go --parseDependency --parseInternal -o docs
+
+swagger-validate: swagger
+	npx --yes @redocly/cli@$(REDOCLY_VERSION) lint docs/swagger.yaml
 
 migrate-up:
 	$(check-database-url)
