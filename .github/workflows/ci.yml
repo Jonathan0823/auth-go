@@ -44,6 +44,21 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: auth_go
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -53,7 +68,24 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
+      - name: Install migrate CLI
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.2/migrate.linux-amd64.tar.gz | tar xvz
+          sudo mv migrate /usr/local/bin/migrate
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
+        run: |
+          migrate -path migrations -database "$DATABASE_URL" up
+
       - name: Test
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_go?sslmode=disable
+          JWT_ACCESS_SECRET: ci-test-access-secret
+          REFRESH_TOKEN_HASH_KEY: ci-test-refresh-hash-key
+          ENVIRONMENT: test
+          DOMAIN: localhost
         run: go test ./...
 
   build:
