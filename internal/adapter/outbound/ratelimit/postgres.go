@@ -26,11 +26,8 @@ func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 }
 
 func (s *PostgresStore) Allow(ctx context.Context, key string, policy port.RateLimitPolicy) (port.RateLimitDecision, error) {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateAllow(ctx, policy); err != nil {
 		return port.RateLimitDecision{}, err
-	}
-	if s.pool == nil || policy.Limit < 1 || policy.Window <= 0 {
-		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
 	}
 
 	now := time.Now().UTC()
@@ -40,31 +37,12 @@ func (s *PostgresStore) Allow(ctx context.Context, key string, policy port.RateL
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
-		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
+	if err := prepareBucket(ctx, tx, key, now); err != nil {
+		return port.RateLimitDecision{}, err
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM rate_limit_buckets WHERE key_hash = $1 AND expires_at <= $2`, key, now); err != nil {
-		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
-	}
-
-	var count int
-	var started time.Time
-	err = tx.QueryRow(ctx, `
-		SELECT count, window_start
-		FROM rate_limit_buckets
-		WHERE key_hash = $1
-	`, key).Scan(&count, &started)
+	count, started, err := findBucket(ctx, tx, key)
 	if errors.Is(err, pgx.ErrNoRows) {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO rate_limit_buckets (key_hash, count, window_start, expires_at)
-			VALUES ($1, 1, $2, $3)
-		`, key, now, now.Add(policy.Window)); err != nil {
-			return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
-		}
-		if err := tx.Commit(ctx); err != nil {
-			return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
-		}
-		return port.RateLimitDecision{Allowed: true}, nil
+		return insertBucket(ctx, tx, key, now, policy)
 	}
 	if err != nil {
 		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
@@ -72,32 +50,82 @@ func (s *PostgresStore) Allow(ctx context.Context, key string, policy port.RateL
 
 	resetAt := started.Add(policy.Window)
 	if !now.Before(resetAt) {
-		if _, err := tx.Exec(ctx, `
-			UPDATE rate_limit_buckets
-			SET count = 1, window_start = $2, expires_at = $3
-			WHERE key_hash = $1
-		`, key, now, now.Add(policy.Window)); err != nil {
-			return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
-		}
-		if err := tx.Commit(ctx); err != nil {
-			return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
-		}
-		return port.RateLimitDecision{Allowed: true}, nil
+		return resetBucket(ctx, tx, key, now, policy)
 	}
 	if count >= policy.Limit {
-		if err := tx.Commit(ctx); err != nil {
-			return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
-		}
-		return port.RateLimitDecision{RetryAfter: resetAt.Sub(now)}, nil
+		return denyBucket(ctx, tx, resetAt.Sub(now))
 	}
+	return incrementBucket(ctx, tx, key)
+}
 
+func (s *PostgresStore) validateAllow(ctx context.Context, policy port.RateLimitPolicy) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s.pool == nil || policy.Limit < 1 || policy.Window <= 0 {
+		return port.ErrRateLimitBackendUnavailable
+	}
+	return nil
+}
+
+func prepareBucket(ctx context.Context, tx pgx.Tx, key string, now time.Time) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
+		return port.ErrRateLimitBackendUnavailable
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM rate_limit_buckets WHERE key_hash = $1 AND expires_at <= $2`, key, now); err != nil {
+		return port.ErrRateLimitBackendUnavailable
+	}
+	return nil
+}
+
+func findBucket(ctx context.Context, tx pgx.Tx, key string) (int, time.Time, error) {
+	var count int
+	var started time.Time
+	err := tx.QueryRow(ctx, `
+		SELECT count, window_start
+		FROM rate_limit_buckets
+		WHERE key_hash = $1
+	`, key).Scan(&count, &started)
+	return count, started, err
+}
+
+func insertBucket(ctx context.Context, tx pgx.Tx, key string, now time.Time, policy port.RateLimitPolicy) (port.RateLimitDecision, error) {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO rate_limit_buckets (key_hash, count, window_start, expires_at)
+		VALUES ($1, 1, $2, $3)
+	`, key, now, now.Add(policy.Window)); err != nil {
+		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
+	}
+	return commitDecision(ctx, tx, port.RateLimitDecision{Allowed: true})
+}
+
+func resetBucket(ctx context.Context, tx pgx.Tx, key string, now time.Time, policy port.RateLimitPolicy) (port.RateLimitDecision, error) {
+	if _, err := tx.Exec(ctx, `
+		UPDATE rate_limit_buckets
+		SET count = 1, window_start = $2, expires_at = $3
+		WHERE key_hash = $1
+	`, key, now, now.Add(policy.Window)); err != nil {
+		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
+	}
+	return commitDecision(ctx, tx, port.RateLimitDecision{Allowed: true})
+}
+
+func denyBucket(ctx context.Context, tx pgx.Tx, retryAfter time.Duration) (port.RateLimitDecision, error) {
+	return commitDecision(ctx, tx, port.RateLimitDecision{RetryAfter: retryAfter})
+}
+
+func incrementBucket(ctx context.Context, tx pgx.Tx, key string) (port.RateLimitDecision, error) {
 	if _, err := tx.Exec(ctx, `UPDATE rate_limit_buckets SET count = count + 1 WHERE key_hash = $1`, key); err != nil {
 		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
 	}
+	return commitDecision(ctx, tx, port.RateLimitDecision{Allowed: true})
+}
+
+func commitDecision(ctx context.Context, tx pgx.Tx, decision port.RateLimitDecision) (port.RateLimitDecision, error) {
 	if err := tx.Commit(ctx); err != nil {
 		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
 	}
-	return port.RateLimitDecision{Allowed: true}, nil
+	return decision, nil
 }
 
 func (s *PostgresStore) Reset(ctx context.Context, key string) error {

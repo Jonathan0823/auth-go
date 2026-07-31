@@ -60,6 +60,22 @@ func LoadRateLimitConfig() RateLimitConfig {
 }
 
 func (c RateLimitConfig) Validate(environment string) error {
+	if err := c.validateBackend(environment); err != nil {
+		return err
+	}
+	if c.Key == "" {
+		return fmt.Errorf("RATE_LIMIT_KEY is required")
+	}
+	if c.MaxMemoryKeys < 1 {
+		return fmt.Errorf("RATE_LIMIT_MAX_MEMORY_KEYS must be positive")
+	}
+	if len(c.invalidPolicyConfiguration) > 0 {
+		return fmt.Errorf("invalid rate-limit policies: %s", strings.Join(c.invalidPolicyConfiguration, ", "))
+	}
+	return validateTrustedProxies(c.TrustedProxies)
+}
+
+func (c RateLimitConfig) validateBackend(environment string) error {
 	switch c.Backend {
 	case "memory":
 		if environment == "production" && !c.AllowMemoryInProduction {
@@ -76,16 +92,11 @@ func (c RateLimitConfig) Validate(environment string) error {
 	default:
 		return fmt.Errorf("unsupported rate-limit backend %q", c.Backend)
 	}
-	if c.Key == "" {
-		return fmt.Errorf("RATE_LIMIT_KEY is required")
-	}
-	if c.MaxMemoryKeys < 1 {
-		return fmt.Errorf("RATE_LIMIT_MAX_MEMORY_KEYS must be positive")
-	}
-	if len(c.invalidPolicyConfiguration) > 0 {
-		return fmt.Errorf("invalid rate-limit policies: %s", strings.Join(c.invalidPolicyConfiguration, ", "))
-	}
-	for _, proxy := range c.TrustedProxies {
+	return nil
+}
+
+func validateTrustedProxies(proxies []string) error {
+	for _, proxy := range proxies {
 		if net.ParseIP(proxy) == nil {
 			if _, _, err := net.ParseCIDR(proxy); err != nil {
 				return fmt.Errorf("invalid trusted proxy address %q", proxy)
