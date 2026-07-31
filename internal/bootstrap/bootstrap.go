@@ -34,11 +34,21 @@ func Run(cfg platform.Config) {
 
 	r := gin.New()
 	logger := platform.NewLogger(cfg.LogLevel)
-	r.Use(inhttpmw.RequestID(), inhttpmw.RequestLogger(logger))
+	metrics := platform.NewMetrics(pool)
+	audit := platform.NewAuditLogger(logger, metrics)
+
+	r.Use(inhttpmw.RequestID())
+	if cfg.EnableMetrics {
+		r.Use(metrics.Middleware())
+	}
+	r.Use(inhttpmw.RequestLogger(logger))
 
 	handler := inhttp.NewHandler(svc, tokens)
+	handler.Audit = audit
 	inhttp.RegisterRoutes(r, handler, logger)
 	inhttp.RegisterSwaggerRoutes(r, cfg.EnableSwagger, cfg.Environment)
+	inhttp.RegisterHealthRoutes(r, pool)
+	platform.RegisterMetricsRoute(r, metrics, cfg.EnableMetrics)
 
 	platform.InitServer(r, cfg)
 }
