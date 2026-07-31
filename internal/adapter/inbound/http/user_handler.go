@@ -11,6 +11,10 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
+func unauthenticatedError() error {
+	return fmt.Errorf("user is not authenticated: %w", domain.ErrUnauthenticated)
+}
+
 func (h *Handler) GetUserByID(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
@@ -72,7 +76,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	}
 	currentUser, err := GetUser(c)
 	if err != nil {
-		c.Error(fmt.Errorf("user is not authenticated: %w", domain.ErrUnauthenticated))
+		c.Error(unauthenticatedError())
 		return
 	}
 	command := domain.UpdateUserCommand{
@@ -98,7 +102,7 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	}
 	currentUser, err := GetUser(c)
 	if err != nil {
-		c.Error(fmt.Errorf("user is not authenticated: %w", domain.ErrUnauthenticated))
+		c.Error(unauthenticatedError())
 		return
 	}
 	if err := h.Svc.User.Delete(ctx, id, currentUser.ID); err != nil {
@@ -113,7 +117,7 @@ func (h *Handler) GetCurrentUser(c *gin.Context) {
 	defer cancel()
 	user, err := GetUser(c)
 	if err != nil {
-		c.Error(fmt.Errorf("user is not authenticated: %w", domain.ErrUnauthenticated))
+		c.Error(unauthenticatedError())
 		return
 	}
 	data, err := h.Svc.User.GetByID(ctx, user.ID)

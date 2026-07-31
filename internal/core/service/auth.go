@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -12,7 +11,12 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/core/port"
 )
 
-var ErrRefreshTokenReused = errors.New("refresh token reused")
+var ErrRefreshTokenReused = fmt.Errorf("refresh token reused")
+
+const (
+	errGetUserByEmail = "get user by email: %w"
+	errUserNotFound   = "user not found: %w"
+)
 
 type authService struct {
 	repo    port.Repository
@@ -51,10 +55,10 @@ func (s *authService) Register(ctx context.Context, user domain.User) error {
 func (s *authService) Login(ctx context.Context, user domain.User) (string, string, error) {
 	userFromDB, err := s.repo.Users().GetByEmail(ctx, user.Email, true)
 	if err != nil {
-		return "", "", fmt.Errorf("get user by email: %w", err)
+		return "", "", fmt.Errorf(errGetUserByEmail, err)
 	}
 	if userFromDB == nil {
-		return "", "", fmt.Errorf("user not found: %w", domain.ErrNotFound)
+		return "", "", fmt.Errorf(errUserNotFound, domain.ErrNotFound)
 	}
 
 	if err := s.hasher.Compare(userFromDB.Password, user.Password); err != nil {
@@ -71,14 +75,12 @@ func (s *authService) Login(ctx context.Context, user domain.User) (string, stri
 		return "", "", fmt.Errorf("generate refresh token: %w", err)
 	}
 
-	familyID := uuid.New()
 	now := time.Now()
-
 	rt := domain.RefreshToken{
 		ID:        uuid.New(),
 		UserID:    userFromDB.ID,
 		TokenHash: hmacHash,
-		FamilyID:  familyID,
+		FamilyID:  uuid.New(),
 		ParentID:  nil,
 		ExpiredAt: now.Add(7 * 24 * time.Hour),
 		CreatedAt: now,
@@ -95,10 +97,10 @@ func (s *authService) Login(ctx context.Context, user domain.User) (string, stri
 func (s *authService) CreateVerifyEmail(ctx context.Context, email string) error {
 	userFromDB, err := s.repo.Users().GetByEmail(ctx, email, false)
 	if err != nil {
-		return fmt.Errorf("get user by email: %w", err)
+		return fmt.Errorf(errGetUserByEmail, err)
 	}
 	if userFromDB == nil {
-		return fmt.Errorf("user not found: %w", domain.ErrNotFound)
+		return fmt.Errorf(errUserNotFound, domain.ErrNotFound)
 	}
 
 	verifyEmail := domain.VerifyEmail{
@@ -140,10 +142,10 @@ func (s *authService) VerifyEmail(ctx context.Context, id string) error {
 func (s *authService) ForgotPassword(ctx context.Context, email string) error {
 	userFromDB, err := s.repo.Users().GetByEmail(ctx, email, false)
 	if err != nil {
-		return fmt.Errorf("get user by email: %w", err)
+		return fmt.Errorf(errGetUserByEmail, err)
 	}
 	if userFromDB == nil {
-		return fmt.Errorf("user not found: %w", domain.ErrNotFound)
+		return fmt.Errorf(errUserNotFound, domain.ErrNotFound)
 	}
 
 	data := domain.ForgotPassword{
@@ -201,76 +203,41 @@ func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userA
 		return "", "", fmt.Errorf("hash refresh token: %w", err)
 	}
 
-	var userID int
-	var newRawToken string
-
-	err = s.repo.WithTx(ctx, func(u port.UnitOfWork) error {
-		token, err := u.Auth().GetRefreshTokenByHash(ctx, hash)
-		if err != nil {
-			return fmt.Errorf("get refresh token: %w", err)
-		}
-		if token == nil {
-			return fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated)
-		}
-		if time.Now().After(token.ExpiredAt) {
-			return fmt.Errorf("refresh token expired: %w", domain.ErrUnauthenticated)
-		}
-		if token.RevokedAt != nil {
-			return fmt.Errorf("refresh token revoked: %w", domain.ErrUnauthenticated)
-		}
-
-		if token.UsedAt != nil {
-			if err := u.Auth().RevokeRefreshTokenFamily(ctx, token.FamilyID); err != nil {
-				return fmt.Errorf("revoke token family: %w", err)
-			}
-			if err := u.Commit(); err != nil {
-				return fmt.Errorf("commit revocation: %w", err)
-			}
-			return ErrRefreshTokenReused
-		}
-
-		if err := u.Auth().UseRefreshToken(ctx, token.ID); err != nil {
-			return fmt.Errorf("use refresh token: %w", err)
-		}
-
-		raw, hmac, err := s.tokens.GenerateRefreshToken()
-		if err != nil {
-			return fmt.Errorf("generate refresh token: %w", err)
-		}
-		newRawToken = raw
-		userID = token.UserID
-
-		now := time.Now()
-		newRT := domain.RefreshToken{
-			ID:        uuid.New(),
-			UserID:    token.UserID,
-			TokenHash: hmac,
-			FamilyID:  token.FamilyID,
-			ParentID:  &token.ID,
-			ExpiredAt: now.Add(7 * 24 * time.Hour),
-			CreatedAt: now,
-			IPAddress: ip,
-			UserAgent: userAgent,
-		}
-		if err := u.Auth().CreateRefreshToken(ctx, newRT); err != nil {
-			return fmt.Errorf("create new refresh token: %w", err)
-		}
-		return nil
-	})
-
-	if errors.Is(err, ErrRefreshTokenReused) {
-		return "", "", fmt.Errorf("refresh token reused: %w", domain.ErrUnauthenticated)
+	tx, err := s.repo.Begin(ctx)
+	if err != nil {
+		return "", "", fmt.Errorf("begin refresh token transaction: %w", err)
 	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	token, err := s.lookupRefreshToken(ctx, tx.Auth(), hash)
 	if err != nil {
 		return "", "", err
 	}
 
-	userFromDB, err := s.repo.Users().GetByID(ctx, userID)
+	if token.UsedAt != nil {
+		if err := s.revokeRefreshTokenFamily(ctx, tx, token.FamilyID); err != nil {
+			return "", "", err
+		}
+		return "", "", fmt.Errorf("refresh token reused: %w", domain.ErrUnauthenticated)
+	}
+
+	newRawToken, err := s.rotateRefreshToken(ctx, tx.Auth(), token, ip, userAgent)
+	if err != nil {
+		return "", "", err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return "", "", fmt.Errorf("commit refresh token transaction: %w", err)
+	}
+
+	userFromDB, err := s.repo.Users().GetByID(ctx, token.UserID)
 	if err != nil {
 		return "", "", fmt.Errorf("get user: %w", err)
 	}
 	if userFromDB == nil {
-		return "", "", fmt.Errorf("user not found: %w", domain.ErrNotFound)
+		return "", "", fmt.Errorf(errUserNotFound, domain.ErrNotFound)
 	}
 
 	accessToken, _, err := s.tokens.GenerateAccessToken(*userFromDB)
@@ -279,6 +246,61 @@ func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userA
 	}
 
 	return accessToken, newRawToken, nil
+}
+
+func (s *authService) lookupRefreshToken(ctx context.Context, auth port.AuthRepository, hash []byte) (*domain.RefreshToken, error) {
+	token, err := auth.GetRefreshTokenByHash(ctx, hash)
+	if err != nil {
+		return nil, fmt.Errorf("get refresh token: %w", err)
+	}
+	if token == nil {
+		return nil, fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated)
+	}
+	if time.Now().After(token.ExpiredAt) {
+		return nil, fmt.Errorf("refresh token expired: %w", domain.ErrUnauthenticated)
+	}
+	if token.RevokedAt != nil {
+		return nil, fmt.Errorf("refresh token revoked: %w", domain.ErrUnauthenticated)
+	}
+	return token, nil
+}
+
+func (s *authService) revokeRefreshTokenFamily(ctx context.Context, tx port.UnitOfWork, familyID uuid.UUID) error {
+	if err := tx.Auth().RevokeRefreshTokenFamily(ctx, familyID); err != nil {
+		return fmt.Errorf("revoke token family: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit revocation: %w", err)
+	}
+	return nil
+}
+
+func (s *authService) rotateRefreshToken(ctx context.Context, auth port.AuthRepository, token *domain.RefreshToken, ip, userAgent string) (string, error) {
+	if err := auth.UseRefreshToken(ctx, token.ID); err != nil {
+		return "", fmt.Errorf("use refresh token: %w", err)
+	}
+
+	raw, hmac, err := s.tokens.GenerateRefreshToken()
+	if err != nil {
+		return "", fmt.Errorf("generate refresh token: %w", err)
+	}
+
+	now := time.Now()
+	newRT := domain.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    token.UserID,
+		TokenHash: hmac,
+		FamilyID:  token.FamilyID,
+		ParentID:  &token.ID,
+		ExpiredAt: now.Add(7 * 24 * time.Hour),
+		CreatedAt: now,
+		IPAddress: ip,
+		UserAgent: userAgent,
+	}
+	if err := auth.CreateRefreshToken(ctx, newRT); err != nil {
+		return "", fmt.Errorf("create new refresh token: %w", err)
+	}
+	return raw, nil
 }
 
 func (s *authService) Logout(ctx context.Context, refreshToken string) error {
