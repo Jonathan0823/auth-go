@@ -95,7 +95,7 @@ go test -tags=integration ./...
 
 - `GET /health/live` reports process liveness without checking PostgreSQL.
 - `GET /health/ready` reports database readiness with a bounded PostgreSQL ping.
-- `GET /metrics` exposes Prometheus metrics only when `ENABLE_METRICS=true`.
+- `GET /metrics` exposes Prometheus metrics only when `ENABLE_METRICS=true`; it is an operational endpoint and is intentionally excluded from Swagger.
 - Security audit events are emitted as structured JSON logs with request IDs and safe categorical context.
 
 Metrics labels use route templates and avoid user-controlled values. Restrict `/metrics` to trusted monitoring systems in production. Grafana, Loki, and tracing infrastructure are intentionally not bundled.

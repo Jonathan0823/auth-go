@@ -56,6 +56,9 @@ func TestSwaggerDocumentsAllAPIRoutes(t *testing.T) {
 
 	documented := make(map[string]bool)
 	for path, operations := range document.Paths {
+		if !strings.HasPrefix(path, "/api/") {
+			continue
+		}
 		for method := range operations {
 			documented[strings.ToUpper(method)+" "+path] = true
 		}
@@ -76,6 +79,29 @@ func TestSwaggerDocumentsAllAPIRoutes(t *testing.T) {
 		if !registered[key] {
 			t.Errorf("documented operation %s is not registered", key)
 		}
+	}
+}
+
+func TestSwaggerDocumentsOperationalRoutes(t *testing.T) {
+	spec, err := os.ReadFile(swaggerSpecPath(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Paths map[string]map[string]json.RawMessage `json:"paths"`
+	}
+	if err := json.Unmarshal(spec, &document); err != nil {
+		t.Fatalf("parse Swagger document: %v", err)
+	}
+
+	for _, key := range []string{"GET /health/live", "GET /health/ready"} {
+		parts := strings.SplitN(key, " ", 2)
+		if _, ok := document.Paths[parts[1]][strings.ToLower(parts[0])]; !ok {
+			t.Errorf("operational route %s is not documented", key)
+		}
+	}
+	if _, ok := document.Paths["/metrics"]; ok {
+		t.Fatal("Prometheus metrics endpoint should not be included in Swagger")
 	}
 }
 

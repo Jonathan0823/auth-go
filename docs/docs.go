@@ -762,6 +762,54 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/health/live": {
+            "get": {
+                "description": "Returns liveness without checking external dependencies.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operations"
+                ],
+                "summary": "Check process liveness",
+                "operationId": "healthLive",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapter_inbound_http.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/ready": {
+            "get": {
+                "description": "Checks PostgreSQL connectivity with a bounded timeout.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operations"
+                ],
+                "summary": "Check service readiness",
+                "operationId": "healthReady",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapter_inbound_http.HealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapter_inbound_http.HealthResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -871,6 +919,15 @@ const docTemplate = `{
                 "error": {
                     "type": "string",
                     "example": "invalid input"
+                }
+            }
+        },
+        "internal_adapter_inbound_http.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
                 }
             }
         },

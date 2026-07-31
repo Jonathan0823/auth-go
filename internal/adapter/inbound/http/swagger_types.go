@@ -19,3 +19,7 @@ type UsersResponseEnvelope struct {
 type ErrorResponse struct {
 	Error string `json:"error" example:"invalid input"`
 }
+
+type HealthResponse struct {
+	Status string `json:"status" example:"ok"`
+}
