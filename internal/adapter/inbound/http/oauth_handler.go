@@ -20,6 +20,9 @@ import (
 // @Failure 400 {object} ErrorResponse
 // @Router /api/oauth/{provider}/ [get]
 func (h *Handler) OAuthLogin(c *gin.Context) {
+	if !h.allowRateLimit(c, ipRateLimit("oauth_ip", c)) {
+		return
+	}
 	h.Svc.OAuth.BeginAuth(c.Writer, c.Request, c.Param("provider"))
 }
 
@@ -36,6 +39,9 @@ func (h *Handler) OAuthLogin(c *gin.Context) {
 func (h *Handler) OAuthCallback(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
+	if !h.allowRateLimit(c, ipRateLimit("oauth_ip", c)) {
+		return
+	}
 	userData, err := h.Svc.OAuth.OAuthLogin(ctx, c.Writer, c.Request, c.Param("provider"))
 	if err != nil {
 		authErr := fmt.Errorf("oauth authentication failed: %w", domain.ErrUnauthenticated)

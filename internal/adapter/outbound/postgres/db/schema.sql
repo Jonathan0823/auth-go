@@ -44,3 +44,12 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_family_id ON refresh_tokens(family_id);
+
+CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+    key_hash TEXT PRIMARY KEY,
+    count BIGINT NOT NULL,
+    window_start TIMESTAMPTZ NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_rate_limit_buckets_expires_at ON rate_limit_buckets(expires_at);
