@@ -45,3 +45,9 @@ func RegisterRoutes(r *gin.Engine, h *Handler, logger *slog.Logger) {
 		user.DELETE("/delete/:id", h.DeleteUser)
 	}
 }
+
+func RegisterHealthRoutes(r *gin.Engine, db DBPinger) {
+	health := NewHealthHandler(db)
+	r.GET("/health/live", health.Live)
+	r.GET("/health/ready", health.Ready)
+}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/dto"
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
+	"github.com/Jonathan0823/auth-go/internal/platform"
 )
 
 var secure = os.Getenv("ENVIRONMENT") == "production"
@@ -87,14 +88,17 @@ func (h *Handler) Register(c *gin.Context) {
 	defer cancel()
 	var req dto.CredentialsRequest
 	if !BindJSONWithValidation(c, &req) {
+		h.audit(c, platform.EventUserRegister, platform.OutcomeFailure, platform.ReasonValidation, "", 0)
 		return
 	}
 
 	user := domain.User{Email: req.Email, Password: req.Password}
 	if err := h.Svc.Auth.Register(ctx, user); err != nil {
+		h.auditFailure(c, platform.EventUserRegister, "", err, 0)
 		c.Error(err)
 		return
 	}
+	h.auditSuccess(c, platform.EventUserRegister, "", 0)
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 
@@ -118,6 +122,7 @@ func (h *Handler) Login(c *gin.Context) {
 	defer cancel()
 	var req dto.CredentialsRequest
 	if !BindJSONWithValidation(c, &req) {
+		h.audit(c, platform.EventAuthLogin, platform.OutcomeFailure, platform.ReasonValidation, "", 0)
 		return
 	}
 
@@ -129,10 +134,12 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 	accessToken, refreshToken, err := h.Svc.Auth.Login(ctx, user)
 	if err != nil {
+		h.auditFailure(c, platform.EventAuthLogin, "", err, 0)
 		c.Error(err)
 		return
 	}
 
+	h.auditSuccess(c, platform.EventAuthLogin, "", 0)
 	setAccessCookie(c, accessToken)
 	setRefreshCookie(c, refreshToken)
 	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully"})
@@ -155,15 +162,19 @@ func (h *Handler) Logout(c *gin.Context) {
 	defer cancel()
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		c.Error(fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated))
+		authErr := fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated)
+		h.auditFailure(c, platform.EventAuthLogout, "", authErr, 0)
+		c.Error(authErr)
 		return
 	}
 
 	if err := h.Svc.Auth.Logout(ctx, refreshToken); err != nil {
+		h.auditFailure(c, platform.EventAuthLogout, "", err, 0)
 		c.Error(err)
 		return
 	}
 
+	h.auditSuccess(c, platform.EventAuthLogout, "", 0)
 	clearCookies(c)
 	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"})
 }
@@ -186,16 +197,24 @@ func (h *Handler) Refresh(c *gin.Context) {
 	defer cancel()
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		c.Error(fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated))
+		authErr := fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated)
+		h.auditFailure(c, platform.EventAuthRefresh, "", authErr, 0)
+		c.Error(authErr)
 		return
 	}
 
 	newAccess, newRefresh, err := h.Svc.Auth.RefreshTokens(ctx, refreshToken, c.ClientIP(), c.GetHeader("User-Agent"))
 	if err != nil {
+		if isRefreshReplay(err) {
+			h.audit(c, platform.EventAuthRefreshReplay, platform.OutcomeDetected, platform.ReasonReplayDetected, "", 0)
+		} else {
+			h.auditFailure(c, platform.EventAuthRefresh, "", err, 0)
+		}
 		c.Error(err)
 		return
 	}
 
+	h.auditSuccess(c, platform.EventAuthRefresh, "", 0)
 	setAccessCookie(c, newAccess)
 	setRefreshCookie(c, newRefresh)
 	c.JSON(http.StatusOK, gin.H{"message": "Access token refreshed successfully"})
@@ -215,9 +234,11 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
 	defer cancel()
 	if err := h.Svc.Auth.VerifyEmail(ctx, c.Query("id")); err != nil {
+		h.auditFailure(c, platform.EventAuthEmailVerification, "", err, 0)
 		c.Error(err)
 		return
 	}
+	h.auditSuccess(c, platform.EventAuthEmailVerification, "", 0)
 	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
 }
 
@@ -236,13 +257,16 @@ func (h *Handler) ResendVerifyEmail(c *gin.Context) {
 	defer cancel()
 	email := c.Query("email")
 	if email == "" {
+		h.audit(c, platform.EventAuthEmailVerification, platform.OutcomeFailure, platform.ReasonValidation, "", 0)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
 		return
 	}
 	if err := h.Svc.Auth.CreateVerifyEmail(ctx, email); err != nil {
+		h.auditFailure(c, platform.EventAuthEmailVerification, "", err, 0)
 		c.Error(err)
 		return
 	}
+	h.auditSuccess(c, platform.EventAuthEmailVerification, "", 0)
 	c.JSON(http.StatusOK, gin.H{"message": "Verification email resent successfully"})
 }
 
@@ -262,12 +286,15 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	defer cancel()
 	var req dto.ForgotPasswordRequest
 	if !BindJSONWithValidation(c, &req) {
+		h.audit(c, platform.EventAuthPasswordResetRequest, platform.OutcomeFailure, platform.ReasonValidation, "", 0)
 		return
 	}
 	if err := h.Svc.Auth.ForgotPassword(ctx, req.Email); err != nil {
+		h.auditFailure(c, platform.EventAuthPasswordResetRequest, "", err, 0)
 		c.Error(err)
 		return
 	}
+	h.auditSuccess(c, platform.EventAuthPasswordResetRequest, "", 0)
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset link sent to your email"})
 }
 
@@ -287,11 +314,14 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	defer cancel()
 	var req dto.ResetPasswordRequest
 	if !BindJSONWithValidation(c, &req) {
+		h.audit(c, platform.EventAuthPasswordReset, platform.OutcomeFailure, platform.ReasonValidation, "", 0)
 		return
 	}
 	if err := h.Svc.Auth.ResetPassword(ctx, req.ID, req.Password); err != nil {
+		h.auditFailure(c, platform.EventAuthPasswordReset, "", err, 0)
 		c.Error(err)
 		return
 	}
+	h.auditSuccess(c, platform.EventAuthPasswordReset, "", 0)
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
 }

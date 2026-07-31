@@ -14,6 +14,7 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	EnableSwagger      bool
+	EnableMetrics      bool
 }
 
 func LoadConfig() Config {
@@ -29,5 +30,6 @@ func LoadConfig() Config {
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		EnableSwagger:      os.Getenv("ENABLE_SWAGGER") == "true",
+		EnableMetrics:      os.Getenv("ENABLE_METRICS") == "true",
 	}
 }
