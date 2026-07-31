@@ -42,6 +42,41 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+  sqlc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Cache sqlc CLI
+        id: cache-sqlc
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/auth-go-tools/sqlc-v1.31.1
+          key: ${{ runner.os }}-sqlc-v1.31.1
+
+      - name: Install sqlc CLI
+        if: steps.cache-sqlc.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.cache/auth-go-tools/sqlc-v1.31.1
+          curl -L https://github.com/sqlc-dev/sqlc/releases/download/v1.31.1/sqlc_1.31.1_linux_amd64.tar.gz | tar xvz
+          mv sqlc ~/.cache/auth-go-tools/sqlc-v1.31.1/sqlc
+          chmod +x ~/.cache/auth-go-tools/sqlc-v1.31.1/sqlc
+
+      - name: Add sqlc to PATH
+        run: echo "$HOME/.cache/auth-go-tools/sqlc-v1.31.1" >> "$GITHUB_PATH"
+
+      - name: Generate SQLC
+        run: make sqlc
+
+      - name: Verify generated code
+        run: git diff --exit-code
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -82,10 +117,23 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
+      - name: Cache migrate CLI
+        id: cache-migrate
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/auth-go-tools/migrate-v4.18.2
+          key: ${{ runner.os }}-migrate-v4.18.2
+
       - name: Install migrate CLI
+        if: steps.cache-migrate.outputs.cache-hit != 'true'
         run: |
+          mkdir -p ~/.cache/auth-go-tools/migrate-v4.18.2
           curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.2/migrate.linux-amd64.tar.gz | tar xvz
-          sudo mv migrate /usr/local/bin/migrate
+          mv migrate ~/.cache/auth-go-tools/migrate-v4.18.2/migrate
+          chmod +x ~/.cache/auth-go-tools/migrate-v4.18.2/migrate
+
+      - name: Add migrate to PATH
+        run: echo "$HOME/.cache/auth-go-tools/migrate-v4.18.2" >> "$GITHUB_PATH"
 
       - name: Run integration tests
         env:
