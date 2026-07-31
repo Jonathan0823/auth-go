@@ -1,0 +1,7 @@
+extends:
+  - recommended
+
+rules:
+  no-path-trailing-slash: off
+  operation-2xx-response: off
+  security-defined: off
