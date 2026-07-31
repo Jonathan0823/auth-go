@@ -39,7 +39,7 @@ func Run(cfg platform.Config) {
 
 	r.Use(inhttpmw.RequestID())
 	if cfg.EnableMetrics {
-		r.Use(metrics.Middleware())
+		r.Use(inhttpmw.Metrics(metrics))
 	}
 	r.Use(inhttpmw.RequestLogger(logger))
 
@@ -48,7 +48,7 @@ func Run(cfg platform.Config) {
 	inhttp.RegisterRoutes(r, handler, logger)
 	inhttp.RegisterSwaggerRoutes(r, cfg.EnableSwagger, cfg.Environment)
 	inhttp.RegisterHealthRoutes(r, pool)
-	platform.RegisterMetricsRoute(r, metrics, cfg.EnableMetrics)
+	inhttp.RegisterMetricsRoute(r, metrics, cfg.EnableMetrics)
 
 	platform.InitServer(r, cfg)
 }

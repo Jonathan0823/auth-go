@@ -2,9 +2,8 @@ package platform
 
 import (
 	"net/http"
-	"strconv"
+	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -54,29 +53,21 @@ func NewMetrics(pool *pgxpool.Pool) *Metrics {
 	return metrics
 }
 
-func (m *Metrics) Middleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		m.httpInFlight.Inc()
-		start := prometheus.NewTimer(prometheus.ObserverFunc(func(duration float64) {
-			method, route, status := requestLabels(c)
-			m.httpRequests.WithLabelValues(method, route, status).Inc()
-			m.httpDuration.WithLabelValues(method, route, status).Observe(duration)
-		}))
-		c.Next()
-		start.ObserveDuration()
-		m.httpInFlight.Dec()
-	}
-}
-
 func (m *Metrics) Handler() http.Handler {
 	return promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{})
 }
 
-func RegisterMetricsRoute(r *gin.Engine, metrics *Metrics, enabled bool) {
-	if !enabled || metrics == nil {
-		return
-	}
-	r.GET("/metrics", gin.WrapH(metrics.Handler()))
+func (m *Metrics) IncInFlight() {
+	m.httpInFlight.Inc()
+}
+
+func (m *Metrics) DecInFlight() {
+	m.httpInFlight.Dec()
+}
+
+func (m *Metrics) ObserveHTTPRequest(method, route, status string, duration time.Duration) {
+	m.httpRequests.WithLabelValues(method, route, status).Inc()
+	m.httpDuration.WithLabelValues(method, route, status).Observe(duration.Seconds())
 }
 
 func (m *Metrics) RecordSecurityEvent(event, outcome, reason, provider string) {
@@ -86,14 +77,6 @@ func (m *Metrics) RecordSecurityEvent(event, outcome, reason, provider string) {
 		normalizeReason(reason),
 		normalizeProvider(provider),
 	).Inc()
-}
-
-func requestLabels(c *gin.Context) (string, string, string) {
-	route := c.FullPath()
-	if route == "" {
-		route = "/__unmatched__"
-	}
-	return c.Request.Method, route, strconv.Itoa(c.Writer.Status())
 }
 
 func normalizeEvent(event string) string {

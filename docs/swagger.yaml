@@ -74,6 +74,12 @@ definitions:
         example: invalid input
         type: string
     type: object
+  internal_adapter_inbound_http.HealthResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
   internal_adapter_inbound_http.MessageResponse:
     properties:
       message:
@@ -591,6 +597,38 @@ paths:
       summary: Update current user
       tags:
       - users
+  /health/live:
+    get:
+      description: Returns liveness without checking external dependencies.
+      operationId: healthLive
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.HealthResponse'
+      summary: Check process liveness
+      tags:
+      - operations
+  /health/ready:
+    get:
+      description: Checks PostgreSQL connectivity with a bounded timeout.
+      operationId: healthReady
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.HealthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/internal_adapter_inbound_http.HealthResponse'
+      summary: Check service readiness
+      tags:
+      - operations
 schemes:
 - http
 - https
