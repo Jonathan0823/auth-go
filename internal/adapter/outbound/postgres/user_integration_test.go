@@ -24,18 +24,18 @@ func TestUserRepositoryCRUD(t *testing.T) {
 		_, _ = pool.Exec(ctx, `DELETE FROM users WHERE email = $1`, email)
 	})
 
-	if err := repo.Users().Create(ctx, domain.User{Username: username, Email: email, Password: "initial-hash"}); err != nil {
+	if err := repo.Users().Create(ctx, domain.User{Username: username, Email: email, Password: "seed-value"}); err != nil {
 		t.Fatalf("Create: %v", err)
 	}
-	if err := repo.Users().Create(ctx, domain.User{Username: username, Email: email, Password: "duplicate"}); !errors.Is(err, domain.ErrConflict) {
+	if err := repo.Users().Create(ctx, domain.User{Username: username, Email: email, Password: "duplicate-value"}); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("duplicate Create error = %v, want conflict", err)
 	}
 
-	withPassword, err := repo.Users().GetByEmail(ctx, email, true)
+	storedUser, err := repo.Users().GetByEmail(ctx, email, true)
 	if err != nil {
 		t.Fatalf("GetByEmail with password: %v", err)
 	}
-	if withPassword == nil || withPassword.Password != "initial-hash" {
+	if storedUser == nil || storedUser.Password != "seed-value" {
 		t.Fatalf("GetByEmail with password = %#v", withPassword)
 	}
 	withoutPassword, err := repo.Users().GetByEmail(ctx, email, false)
@@ -57,14 +57,14 @@ func TestUserRepositoryCRUD(t *testing.T) {
 		t.Fatalf("missing GetByEmail = %#v, %v", missing, err)
 	}
 
-	if err := repo.Users().Update(ctx, domain.UpdateUserCommand{ID: withPassword.ID, Username: "updated-user", Email: email}); err != nil {
+	if err := repo.Users().Update(ctx, domain.UpdateUserCommand{ID: storedUser.ID, Username: "updated-user", Email: email}); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
-	if err := repo.Users().UpdatePassword(ctx, withPassword.ID, "updated-hash"); err != nil {
+	if err := repo.Users().UpdatePassword(ctx, storedUser.ID, "updated-value"); err != nil {
 		t.Fatalf("UpdatePassword: %v", err)
 	}
 	updated, err := repo.Users().GetByEmail(ctx, email, true)
-	if err != nil || updated == nil || updated.Username != "updated-user" || updated.Password != "updated-hash" {
+	if err != nil || updated == nil || updated.Username != "updated-user" || updated.Password != "updated-value" {
 		t.Fatalf("updated user = %#v, %v", updated, err)
 	}
 
@@ -74,7 +74,7 @@ func TestUserRepositoryCRUD(t *testing.T) {
 	}
 	found := false
 	for _, candidate := range all {
-		if candidate.ID == withPassword.ID {
+		if candidate.ID == storedUser.ID {
 			found = true
 			break
 		}
@@ -83,10 +83,10 @@ func TestUserRepositoryCRUD(t *testing.T) {
 		t.Fatalf("GetAll did not contain user %d", withPassword.ID)
 	}
 
-	if err := repo.Users().Delete(ctx, withPassword.ID); err != nil {
+	if err := repo.Users().Delete(ctx, storedUser.ID); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
-	if deleted, err := repo.Users().GetByID(ctx, withPassword.ID); err != nil || deleted != nil {
+	if deleted, err := repo.Users().GetByID(ctx, storedUser.ID); err != nil || deleted != nil {
 		t.Fatalf("deleted GetByID = %#v, %v", deleted, err)
 	}
 }
