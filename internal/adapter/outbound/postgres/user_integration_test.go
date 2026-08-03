@@ -36,7 +36,7 @@ func TestUserRepositoryCRUD(t *testing.T) {
 		t.Fatalf("GetByEmail with password: %v", err)
 	}
 	if storedUser == nil || storedUser.Password != "seed-value" {
-		t.Fatalf("GetByEmail with password = %#v", withPassword)
+		t.Fatalf("GetByEmail with password = %#v", storedUser)
 	}
 	withoutPassword, err := repo.Users().GetByEmail(ctx, email, false)
 	if err != nil {
@@ -46,7 +46,7 @@ func TestUserRepositoryCRUD(t *testing.T) {
 		t.Fatalf("GetByEmail without password = %#v", withoutPassword)
 	}
 
-	byID, err := repo.Users().GetByID(ctx, withPassword.ID)
+	byID, err := repo.Users().GetByID(ctx, storedUser.ID)
 	if err != nil || byID == nil || byID.Email != email {
 		t.Fatalf("GetByID = %#v, %v", byID, err)
 	}
@@ -80,7 +80,7 @@ func TestUserRepositoryCRUD(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("GetAll did not contain user %d", withPassword.ID)
+		t.Fatalf("GetAll did not contain user %d", storedUser.ID)
 	}
 
 	if err := repo.Users().Delete(ctx, storedUser.ID); err != nil {
