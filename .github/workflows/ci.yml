@@ -56,7 +56,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7.0.1
         with:
-          version: 1.64.8
+          version: v2.12.2
 
   sqlc:
     runs-on: ubuntu-latest
