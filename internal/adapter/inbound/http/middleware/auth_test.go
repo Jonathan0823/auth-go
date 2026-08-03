@@ -13,14 +13,14 @@ import (
 )
 
 type middlewareTokenService struct {
-	claims map[string]interface{}
+	claims map[string]any
 	err    error
 }
 
 func (t middlewareTokenService) GenerateAccessToken(domain.User) (string, string, error) {
 	return "", "", nil
 }
-func (t middlewareTokenService) ValidateAccessToken(string) (map[string]interface{}, error) {
+func (t middlewareTokenService) ValidateAccessToken(string) (map[string]any, error) {
 	return t.claims, t.err
 }
 func (t middlewareTokenService) GenerateRefreshToken() (string, []byte, error) {
@@ -52,7 +52,7 @@ func TestAuthMiddlewareAcceptsValidToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(NewAuthMiddleware(middlewareTokenService{
-		claims: map[string]interface{}{"id": float64(1)},
+		claims: map[string]any{"id": float64(1)},
 	}).Handler())
 	router.GET("/", func(c *gin.Context) {
 		if _, exists := c.Get("user"); !exists {

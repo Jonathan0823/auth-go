@@ -101,7 +101,7 @@ type handlerTokenService struct{}
 func (handlerTokenService) GenerateAccessToken(domain.User) (string, string, error) {
 	return "access", "jti", nil
 }
-func (handlerTokenService) ValidateAccessToken(string) (map[string]interface{}, error) {
+func (handlerTokenService) ValidateAccessToken(string) (map[string]any, error) {
 	return nil, nil
 }
 func (handlerTokenService) GenerateRefreshToken() (string, []byte, error) {
@@ -246,7 +246,7 @@ func TestUserHandlers(t *testing.T) {
 	h := newHandlerTest(&handlerAuthService{}, users, &handlerOAuthService{})
 	withUser := func(handler gin.HandlerFunc) gin.HandlerFunc {
 		return func(c *gin.Context) {
-			c.Set("user", map[string]interface{}{"id": float64(1), "username": "user", "email": "user@example.com"})
+			c.Set("user", map[string]any{"id": float64(1), "username": "user", "email": "user@example.com"})
 			handler(c)
 		}
 	}

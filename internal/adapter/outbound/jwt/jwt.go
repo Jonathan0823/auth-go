@@ -40,7 +40,7 @@ func (s *tokenService) GenerateAccessToken(user domain.User) (token, jti string,
 	return t, jti, err
 }
 
-func (s *tokenService) ValidateAccessToken(tokenString string) (map[string]interface{}, error) {
+func (s *tokenService) ValidateAccessToken(tokenString string) (map[string]any, error) {
 	secret := []byte(os.Getenv("JWT_ACCESS_SECRET"))
 	if len(secret) == 0 {
 		log.Fatal("JWT_ACCESS_SECRET is not set")

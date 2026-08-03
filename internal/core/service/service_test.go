@@ -232,7 +232,7 @@ func (f fakeTokens) GenerateAccessToken(domain.User) (string, string, error) {
 	return f.accessToken, "jti", f.accessErr
 }
 
-func (f fakeTokens) ValidateAccessToken(string) (map[string]interface{}, error) {
+func (f fakeTokens) ValidateAccessToken(string) (map[string]any, error) {
 	return nil, nil
 }
 

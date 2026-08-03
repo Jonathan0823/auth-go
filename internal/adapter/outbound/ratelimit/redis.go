@@ -46,7 +46,7 @@ func (s *RedisStore) Allow(ctx context.Context, key string, policy port.RateLimi
 	if err != nil {
 		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
 	}
-	values, ok := result.([]interface{})
+	values, ok := result.([]any)
 	if !ok || len(values) != 2 {
 		return port.RateLimitDecision{}, port.ErrRateLimitBackendUnavailable
 	}
@@ -82,7 +82,7 @@ func (s *RedisStore) Backend() string { return "redis" }
 
 func (s *RedisStore) Close() error { return nil }
 
-func toString(value interface{}) string {
+func toString(value any) string {
 	switch v := value.(type) {
 	case string:
 		return v
