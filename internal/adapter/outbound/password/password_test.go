@@ -40,7 +40,7 @@ func TestHashProducesArgon2idFormat(t *testing.T) {
 		t.Fatalf("Hash missing argon2id prefix: %q", hash)
 	}
 	if hash[10:14] != "v=19" && hash[10:13] != "v=1" {
-		// v=19 for argon2 version number
+		t.Fatalf("unexpected Argon2 version: %q", hash[10:14])
 	}
 }
 

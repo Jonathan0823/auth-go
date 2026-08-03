@@ -26,5 +26,7 @@ func InitServer(r *gin.Engine, cfg Config) {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	r.Run(fmt.Sprintf(":%s", cfg.Port))
+	if err := r.Run(fmt.Sprintf(":%s", cfg.Port)); err != nil {
+		log.Fatalf("server failed: %v", err)
+	}
 }

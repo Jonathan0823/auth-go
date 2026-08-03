@@ -48,9 +48,9 @@ func Run(cfg platform.Config) {
 	if err != nil {
 		log.Fatal("rate-limit backend is unavailable")
 	}
-	defer rateLimitStore.Close()
+	defer func() { _ = rateLimitStore.Close() }()
 	if redisClient != nil {
-		defer redisClient.Close()
+		defer func() { _ = redisClient.Close() }()
 	}
 
 	r.Use(inhttpmw.RequestID())

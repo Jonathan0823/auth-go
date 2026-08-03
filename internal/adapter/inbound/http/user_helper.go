@@ -1,3 +1,4 @@
+// Package http provides inbound HTTP handlers and routing.
 package http
 
 import (
@@ -13,7 +14,7 @@ func GetUser(c *gin.Context) (domain.User, error) {
 	if !exists {
 		return domain.User{}, fmt.Errorf("user is not found")
 	}
-	claims, ok := raw.(map[string]interface{})
+	claims, ok := raw.(map[string]any)
 	if !ok {
 		return domain.User{}, fmt.Errorf("invalid token claims")
 	}

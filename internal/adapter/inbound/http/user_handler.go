@@ -37,7 +37,7 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 	}
 	user, err := h.Svc.User.GetByID(ctx, id)
 	if err != nil {
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -61,7 +61,7 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 	defer cancel()
 	users, err := h.Svc.User.GetAll(ctx)
 	if err != nil {
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -92,7 +92,7 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 	}
 	user, err := h.Svc.User.GetByEmail(ctx, email)
 	if err != nil {
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -123,7 +123,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	}
 	currentUser, err := GetUser(c)
 	if err != nil {
-		c.Error(unauthenticatedError())
+		_ = c.Error(unauthenticatedError())
 		return
 	}
 	command := domain.UpdateUserCommand{
@@ -133,7 +133,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		Email:     req.Email,
 	}
 	if err := h.Svc.User.Update(ctx, currentUser.ID, command); err != nil {
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
@@ -162,11 +162,11 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	}
 	currentUser, err := GetUser(c)
 	if err != nil {
-		c.Error(unauthenticatedError())
+		_ = c.Error(unauthenticatedError())
 		return
 	}
 	if err := h.Svc.User.Delete(ctx, id, currentUser.ID); err != nil {
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
@@ -187,12 +187,12 @@ func (h *Handler) GetCurrentUser(c *gin.Context) {
 	defer cancel()
 	user, err := GetUser(c)
 	if err != nil {
-		c.Error(unauthenticatedError())
+		_ = c.Error(unauthenticatedError())
 		return
 	}
 	data, err := h.Svc.User.GetByID(ctx, user.ID)
 	if err != nil {
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{

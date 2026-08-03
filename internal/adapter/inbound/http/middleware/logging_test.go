@@ -120,7 +120,7 @@ func TestErrorHandlerLogsOnlyServerErrors(t *testing.T) {
 			api := r.Group("/api")
 			api.Use(ErrorHandler(logger))
 			api.GET("/test", func(c *gin.Context) {
-				c.Error(tt.err)
+				_ = c.Error(tt.err)
 			})
 
 			res := httptest.NewRecorder()

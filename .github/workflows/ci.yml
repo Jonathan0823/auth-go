@@ -42,6 +42,22 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7.0.1
+        with:
+          version: v2.12.2
+
   sqlc:
     runs-on: ubuntu-latest
     steps:

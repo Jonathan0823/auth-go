@@ -1,0 +1,9 @@
+# Required for ggshield v2 configuration.
+version: 2
+
+secret:
+  ignored_paths:
+    - '**/*_test.go'
+    - '**/testdata/**'
+    - '**/fixtures/**'
+  show_secrets: false

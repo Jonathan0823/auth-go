@@ -101,7 +101,7 @@ func (h *Handler) Register(c *gin.Context) {
 	user := domain.User{Email: req.Email, Password: req.Password}
 	if err := h.Svc.Auth.Register(ctx, user); err != nil {
 		h.auditFailure(c, platform.EventUserRegister, "", err, 0)
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	h.auditSuccess(c, platform.EventUserRegister, "", 0)
@@ -147,7 +147,7 @@ func (h *Handler) Login(c *gin.Context) {
 	accessToken, refreshToken, err := h.Svc.Auth.Login(ctx, user)
 	if err != nil {
 		h.auditFailure(c, platform.EventAuthLogin, "", err, 0)
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 
@@ -177,13 +177,13 @@ func (h *Handler) Logout(c *gin.Context) {
 	if err != nil || refreshToken == "" {
 		authErr := fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated)
 		h.auditFailure(c, platform.EventAuthLogout, "", authErr, 0)
-		c.Error(authErr)
+		_ = c.Error(authErr)
 		return
 	}
 
 	if err := h.Svc.Auth.Logout(ctx, refreshToken); err != nil {
 		h.auditFailure(c, platform.EventAuthLogout, "", err, 0)
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 
@@ -215,7 +215,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 	if err != nil || refreshToken == "" {
 		authErr := fmt.Errorf("refresh token not found: %w", domain.ErrUnauthenticated)
 		h.auditFailure(c, platform.EventAuthRefresh, "", authErr, 0)
-		c.Error(authErr)
+		_ = c.Error(authErr)
 		return
 	}
 
@@ -226,7 +226,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 		} else {
 			h.auditFailure(c, platform.EventAuthRefresh, "", err, 0)
 		}
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 
@@ -251,7 +251,7 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	defer cancel()
 	if err := h.Svc.Auth.VerifyEmail(ctx, c.Query("id")); err != nil {
 		h.auditFailure(c, platform.EventAuthEmailVerification, "", err, 0)
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	h.auditSuccess(c, platform.EventAuthEmailVerification, "", 0)
@@ -285,7 +285,7 @@ func (h *Handler) ResendVerifyEmail(c *gin.Context) {
 	}
 	if err := h.Svc.Auth.CreateVerifyEmail(ctx, email); err != nil {
 		h.auditFailure(c, platform.EventAuthEmailVerification, "", err, 0)
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	h.auditSuccess(c, platform.EventAuthEmailVerification, "", 0)
@@ -319,7 +319,7 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	}
 	if err := h.Svc.Auth.ForgotPassword(ctx, req.Email); err != nil {
 		h.auditFailure(c, platform.EventAuthPasswordResetRequest, "", err, 0)
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	h.auditSuccess(c, platform.EventAuthPasswordResetRequest, "", 0)
@@ -353,7 +353,7 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	}
 	if err := h.Svc.Auth.ResetPassword(ctx, req.ID, req.Password); err != nil {
 		h.auditFailure(c, platform.EventAuthPasswordReset, "", err, 0)
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 	h.auditSuccess(c, platform.EventAuthPasswordReset, "", 0)
