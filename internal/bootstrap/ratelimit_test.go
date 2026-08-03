@@ -13,20 +13,20 @@ func TestNewRateLimitStoreBackends(t *testing.T) {
 	if err != nil || redisClient != nil || memory.Backend() != "memory" {
 		t.Fatalf("memory store = %v, %v, %v", memory, redisClient, err)
 	}
-	memory.Close()
+	_ = memory.Close()
 
 	postgres, redisClient, err := newRateLimitStore(platform.RateLimitConfig{Backend: "postgres"}, nil)
 	if err != nil || redisClient != nil || postgres.Backend() != "postgres" {
 		t.Fatalf("postgres store = %v, %v, %v", postgres, redisClient, err)
 	}
-	postgres.Close()
+	_ = postgres.Close()
 
 	redis, redisClient, err := newRateLimitStore(platform.RateLimitConfig{Backend: "redis", RedisAddr: "localhost:6399"}, nil)
 	if err != nil || redisClient == nil || redis.Backend() != "redis" {
 		t.Fatalf("redis store = %v, %v, %v", redis, redisClient, err)
 	}
-	redis.Close()
-	redisClient.Close()
+	_ = redis.Close()
+	_ = redisClient.Close()
 
 	store, client, err := newRateLimitStore(platform.RateLimitConfig{Backend: "unknown"}, nil)
 	if store != nil || client != nil || err != port.ErrRateLimitBackendUnavailable {

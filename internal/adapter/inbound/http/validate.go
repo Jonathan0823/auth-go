@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -45,7 +46,10 @@ func ValidateStruct(s any) map[string]string {
 
 func getJSONFieldName(s any, fieldName string) string {
 	t := reflect.TypeOf(s)
-	if t.Kind() == reflect.Ptr {
+	if t == nil {
+		return fieldName
+	}
+	if strings.HasPrefix(t.String(), "*") {
 		t = t.Elem()
 	}
 	if f, ok := t.FieldByName(fieldName); ok {

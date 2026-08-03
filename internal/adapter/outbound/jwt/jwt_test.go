@@ -10,12 +10,12 @@ import (
 func setupTokenEnv(t *testing.T) func() {
 	origAccess := os.Getenv("JWT_ACCESS_SECRET")
 	origHashKey := os.Getenv("REFRESH_TOKEN_HASH_KEY")
-	os.Setenv("JWT_ACCESS_SECRET", "test-access-secret-32-chars-long-for-hs256!")
-	os.Setenv("REFRESH_TOKEN_HASH_KEY", "test-refresh-hash-key-32-chars-long-for-test")
+	_ = os.Setenv("JWT_ACCESS_SECRET", "test-access-secret-32-chars-long-for-hs256!")
+	_ = os.Setenv("REFRESH_TOKEN_HASH_KEY", "test-refresh-hash-key-32-chars-long-for-test")
 
 	return func() {
-		os.Setenv("JWT_ACCESS_SECRET", origAccess)
-		os.Setenv("REFRESH_TOKEN_HASH_KEY", origHashKey)
+		_ = os.Setenv("JWT_ACCESS_SECRET", origAccess)
+		_ = os.Setenv("REFRESH_TOKEN_HASH_KEY", origHashKey)
 	}
 }
 
