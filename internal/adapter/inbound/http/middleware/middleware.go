@@ -22,13 +22,13 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := c.Cookie("access_token")
 		if err != nil || token == "" {
-			c.Error(fmt.Errorf("missing access token: %w", domain.ErrUnauthenticated))
+			_ = c.Error(fmt.Errorf("missing access token: %w", domain.ErrUnauthenticated))
 			c.Abort()
 			return
 		}
 		claims, err := m.Tokens.ValidateAccessToken(token)
 		if err != nil {
-			c.Error(fmt.Errorf("invalid access token: %w", domain.ErrUnauthenticated))
+			_ = c.Error(fmt.Errorf("invalid access token: %w", domain.ErrUnauthenticated))
 			c.Abort()
 			return
 		}

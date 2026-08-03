@@ -46,7 +46,7 @@ func (h *Handler) OAuthCallback(c *gin.Context) {
 	if err != nil {
 		authErr := fmt.Errorf("oauth authentication failed: %w", domain.ErrUnauthenticated)
 		h.auditFailure(c, platform.EventAuthOAuth, c.Param("provider"), authErr, 0)
-		c.Error(authErr)
+		_ = c.Error(authErr)
 		return
 	}
 
