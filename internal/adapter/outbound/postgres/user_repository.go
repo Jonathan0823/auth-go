@@ -7,14 +7,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
 type userRepository struct {
-	q    *Queries
-	pool *pgxpool.Pool
+	q *Queries
 }
 
 func pgUniqueViolation(err error) bool {

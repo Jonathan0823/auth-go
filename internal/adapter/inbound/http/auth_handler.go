@@ -3,7 +3,6 @@ package http
 import (
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -12,62 +11,53 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/platform"
 )
 
-var secure = os.Getenv("ENVIRONMENT") == "production"
-
 const (
 	accessCookieMaxAge  = 15 * 60
 	refreshCookieMaxAge = 7 * 24 * 3600
 )
 
-func setAccessCookie(c *gin.Context, token string) {
+func (h *Handler) setAccessCookie(c *gin.Context, token string) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "access_token",
 		Value:    token,
 		MaxAge:   accessCookieMaxAge,
 		Path:     "/",
-		Domain:   cookieDomain(),
-		Secure:   secure,
+		Domain:   h.CookieDomain,
+		Secure:   h.SecureCookie,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
 }
 
-func setRefreshCookie(c *gin.Context, token string) {
+func (h *Handler) setRefreshCookie(c *gin.Context, token string) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    token,
 		MaxAge:   refreshCookieMaxAge,
 		Path:     "/",
-		Domain:   cookieDomain(),
-		Secure:   secure,
+		Domain:   h.CookieDomain,
+		Secure:   h.SecureCookie,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
 }
 
-func clearCookies(c *gin.Context) {
-	clearCookie(c, "access_token")
-	clearCookie(c, "refresh_token")
+func (h *Handler) clearCookies(c *gin.Context) {
+	h.clearCookie(c, "access_token")
+	h.clearCookie(c, "refresh_token")
 }
 
-func clearCookie(c *gin.Context, name string) {
+func (h *Handler) clearCookie(c *gin.Context, name string) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     name,
 		Value:    "",
 		MaxAge:   -1,
 		Path:     "/",
-		Domain:   cookieDomain(),
-		Secure:   secure,
+		Domain:   h.CookieDomain,
+		Secure:   h.SecureCookie,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
-}
-
-func cookieDomain() string {
-	if d := os.Getenv("DOMAIN"); d != "" {
-		return d
-	}
-	return "localhost"
 }
 
 // Register creates a new user account and sends an email verification link.
@@ -153,8 +143,8 @@ func (h *Handler) Login(c *gin.Context) {
 
 	h.resetRateLimit(c, emailRateLimit("login_account", req.Email))
 	h.auditSuccess(c, platform.EventAuthLogin, "", 0)
-	setAccessCookie(c, accessToken)
-	setRefreshCookie(c, refreshToken)
+	h.setAccessCookie(c, accessToken)
+	h.setRefreshCookie(c, refreshToken)
 	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully"})
 }
 
@@ -188,7 +178,7 @@ func (h *Handler) Logout(c *gin.Context) {
 	}
 
 	h.auditSuccess(c, platform.EventAuthLogout, "", 0)
-	clearCookies(c)
+	h.clearCookies(c)
 	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"})
 }
 
@@ -231,8 +221,8 @@ func (h *Handler) Refresh(c *gin.Context) {
 	}
 
 	h.auditSuccess(c, platform.EventAuthRefresh, "", 0)
-	setAccessCookie(c, newAccess)
-	setRefreshCookie(c, newRefresh)
+	h.setAccessCookie(c, newAccess)
+	h.setRefreshCookie(c, newRefresh)
 	c.JSON(http.StatusOK, gin.H{"message": "Access token refreshed successfully"})
 }
 

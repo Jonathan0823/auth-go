@@ -35,13 +35,10 @@ type AuthRepository interface {
 type UnitOfWork interface {
 	Users() UserRepository
 	Auth() AuthRepository
-	Commit() error
-	Rollback() error
 }
 
 type Repository interface {
-	Begin(ctx context.Context) (UnitOfWork, error)
-	WithTx(ctx context.Context, fn func(u UnitOfWork) error) error
+	WithTx(ctx context.Context, fn func(UnitOfWork) error) error
 	Users() UserRepository
 	Auth() AuthRepository
 }

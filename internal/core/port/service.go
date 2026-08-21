@@ -2,7 +2,6 @@ package port
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
@@ -27,8 +26,7 @@ type UserService interface {
 }
 
 type OAuthService interface {
-	BeginAuth(w http.ResponseWriter, r *http.Request, provider string)
-	OAuthLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, provider string) (*domain.User, error)
+	Login(ctx context.Context, profile domain.OAuthProfile) (*domain.User, error)
 }
 
 type Service struct {

@@ -14,8 +14,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 
@@ -24,12 +27,11 @@ import (
 )
 
 func main() {
-	if os.Getenv("ENVIRONMENT") != "production" {
-		if err := godotenv.Load(); err != nil {
-			log.Fatal("Error loading .env file")
-		}
-	}
+	_ = godotenv.Load()
 
-	cfg := platform.LoadConfig()
-	bootstrap.Run(cfg)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if err := bootstrap.Run(ctx, platform.LoadConfig()); err != nil {
+		log.Fatal(err)
+	}
 }

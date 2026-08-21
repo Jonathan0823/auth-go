@@ -1,29 +1,22 @@
 package jwt
 
 import (
-	"os"
 	"testing"
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
-func setupTokenEnv(t *testing.T) func() {
-	origAccess := os.Getenv("JWT_ACCESS_SECRET")
-	origHashKey := os.Getenv("REFRESH_TOKEN_HASH_KEY")
-	_ = os.Setenv("JWT_ACCESS_SECRET", "test-access-secret-32-chars-long-for-hs256!")
-	_ = os.Setenv("REFRESH_TOKEN_HASH_KEY", "test-refresh-hash-key-32-chars-long-for-test")
+const (
+	testAccessSecret = "test-access-secret-32-chars-long-for-hs256!"
+	testRefreshKey   = "test-refresh-hash-key-32-chars-long-for-test"
+)
 
-	return func() {
-		_ = os.Setenv("JWT_ACCESS_SECRET", origAccess)
-		_ = os.Setenv("REFRESH_TOKEN_HASH_KEY", origHashKey)
-	}
+func newTestTokenService() *tokenService {
+	return NewTokenService(testAccessSecret, testRefreshKey).(*tokenService)
 }
 
 func TestGenerateAccessToken(t *testing.T) {
-	cleanup := setupTokenEnv(t)
-	defer cleanup()
-
-	s := NewTokenService()
+	s := newTestTokenService()
 	user := domain.User{ID: 1, Username: "testuser", Email: "test@example.com"}
 
 	token, jti, err := s.GenerateAccessToken(user)
@@ -39,10 +32,7 @@ func TestGenerateAccessToken(t *testing.T) {
 }
 
 func TestValidateAccessToken(t *testing.T) {
-	cleanup := setupTokenEnv(t)
-	defer cleanup()
-
-	s := NewTokenService()
+	s := newTestTokenService()
 	user := domain.User{ID: 1, Username: "testuser", Email: "test@example.com"}
 
 	token, _, err := s.GenerateAccessToken(user)
@@ -66,89 +56,69 @@ func TestValidateAccessToken(t *testing.T) {
 	}
 }
 
-func TestValidateAccessToken_Invalid(t *testing.T) {
-	cleanup := setupTokenEnv(t)
-	defer cleanup()
-
-	s := NewTokenService()
-	_, err := s.ValidateAccessToken("invalid-token")
-	if err == nil {
+func TestValidateAccessTokenInvalid(t *testing.T) {
+	s := newTestTokenService()
+	if _, err := s.ValidateAccessToken("invalid-token"); err == nil {
 		t.Fatal("ValidateAccessToken() with invalid token: expected error")
 	}
 }
 
 func TestGenerateRefreshToken(t *testing.T) {
-	cleanup := setupTokenEnv(t)
-	defer cleanup()
-
-	s := NewTokenService()
-
+	s := newTestTokenService()
 	raw1, hash1, err := s.GenerateRefreshToken()
 	if err != nil {
 		t.Fatalf("GenerateRefreshToken() error = %v", err)
 	}
-	if raw1 == "" {
-		t.Fatal("GenerateRefreshToken() returned empty raw token")
-	}
-	if len(hash1) == 0 {
-		t.Fatal("GenerateRefreshToken() returned empty hash")
+	if raw1 == "" || len(hash1) == 0 {
+		t.Fatal("GenerateRefreshToken() returned empty token or hash")
 	}
 
 	raw2, _, err := s.GenerateRefreshToken()
 	if err != nil {
-		t.Fatalf("GenerateRefreshToken() 2nd call error = %v", err)
+		t.Fatalf("GenerateRefreshToken() second call error = %v", err)
 	}
-
 	if raw1 == raw2 {
-		t.Fatal("Two refresh tokens should differ")
+		t.Fatal("two refresh tokens should differ")
 	}
 }
 
 func TestHashRefreshToken(t *testing.T) {
-	cleanup := setupTokenEnv(t)
-	defer cleanup()
-
-	s := NewTokenService()
-
+	s := newTestTokenService()
 	raw, hash1, err := s.GenerateRefreshToken()
 	if err != nil {
 		t.Fatalf("GenerateRefreshToken() error = %v", err)
 	}
-
 	hash2, err := s.HashRefreshToken(raw)
 	if err != nil {
 		t.Fatalf("HashRefreshToken() error = %v", err)
 	}
-
-	if len(hash1) != 32 {
-		t.Fatalf("expected 32-byte HMAC, got hash1=%d", len(hash1))
+	if len(hash1) != 32 || len(hash2) != 32 {
+		t.Fatalf("expected 32-byte HMAC, got %d and %d", len(hash1), len(hash2))
 	}
-
-	if len(hash2) != 32 {
-		t.Fatalf("expected 32-byte HMAC, got hash2=%d", len(hash2))
-	}
-
-	for i := range hash1 {
-		if hash1[i] != hash2[i] {
-			t.Fatal("HashRefreshToken() result differs from GenerateRefreshToken() result")
-		}
+	if string(hash1) != string(hash2) {
+		t.Fatal("HashRefreshToken() result differs from GenerateRefreshToken() result")
 	}
 }
 
 func TestGenerateRefreshTokenNotJWT(t *testing.T) {
-	cleanup := setupTokenEnv(t)
-	defer cleanup()
-
-	s := NewTokenService()
+	s := newTestTokenService()
 	raw, _, err := s.GenerateRefreshToken()
 	if err != nil {
 		t.Fatalf("GenerateRefreshToken() error = %v", err)
 	}
-
-	// Refresh tokens must not contain JWT separators (dots).
 	for _, c := range raw {
 		if c == '.' {
-			t.Fatal("Refresh token looks like a JWT (contains '.')")
+			t.Fatal("refresh token looks like a JWT")
 		}
+	}
+}
+
+func TestEmptySecretsReturnErrors(t *testing.T) {
+	s := NewTokenService("", "")
+	if _, _, err := s.GenerateAccessToken(domain.User{}); err == nil {
+		t.Fatal("GenerateAccessToken succeeded without a secret")
+	}
+	if _, _, err := s.GenerateRefreshToken(); err == nil {
+		t.Fatal("GenerateRefreshToken succeeded without a key")
 	}
 }

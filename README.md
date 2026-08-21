@@ -14,6 +14,7 @@ Build a REST API with Gin, PostgreSQL, OAuth, email verification, password reset
 - **OAuth login** — GitHub and Google providers.
 - **Email workflows** — verification and password-reset flows.
 - **Integration-ready CI** — PostgreSQL-backed tests run separately from the unit suite.
+- **Bounded server lifecycle** — explicit HTTP timeouts and graceful SIGINT/SIGTERM shutdown.
 
 ## Quick start
 
@@ -56,16 +57,18 @@ ENABLE_METRICS=false
 SESSION_SECRET=replace-with-a-long-random-secret
 ```
 
-OAuth and email variables are optional until those features are enabled:
+Email credentials are required because registration and recovery send mail. OAuth providers are optional, but each configured client ID must have its matching secret:
 
 ```dotenv
+EMAIL=your-email@gmail.com
+PASSWORD=your-gmail-app-password
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-EMAIL=
-PASSWORD=
 ```
+
+Configuration is validated before the database or HTTP server starts. In production, JWT, refresh-token, session, and rate-limit secrets must each be at least 32 bytes.
 
 Authentication rate limiting supports `memory`, `redis`, and `postgres` backends. Memory is intended for development or an explicitly approved single-instance deployment; production should use Redis or PostgreSQL. Set `RATE_LIMIT_KEY` to a separate secret and configure `TRUSTED_PROXIES` only for known proxy networks.
 

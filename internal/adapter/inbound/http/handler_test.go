@@ -91,7 +91,10 @@ type handlerOAuthService struct {
 func (f *handlerOAuthService) BeginAuth(http.ResponseWriter, *http.Request, string) {
 	f.beginCall = true
 }
-func (f *handlerOAuthService) OAuthLogin(context.Context, http.ResponseWriter, *http.Request, string) (*domain.User, error) {
+func (f *handlerOAuthService) CompleteAuth(http.ResponseWriter, *http.Request, string) (domain.OAuthProfile, error) {
+	return domain.OAuthProfile{Email: "oauth@example.com"}, f.err
+}
+func (f *handlerOAuthService) Login(context.Context, domain.OAuthProfile) (*domain.User, error) {
 	f.callbackCall = true
 	return f.user, f.err
 }
@@ -109,8 +112,12 @@ func (handlerTokenService) GenerateRefreshToken() (string, []byte, error) {
 }
 func (handlerTokenService) HashRefreshToken(string) ([]byte, error) { return []byte("hash"), nil }
 
-func newHandlerTest(auth port.AuthService, user port.UserService, oauth port.OAuthService) *Handler {
-	return &Handler{Svc: port.Service{Auth: auth, User: user, OAuth: oauth}, Tokens: handlerTokenService{}}
+func newHandlerTest(auth port.AuthService, user port.UserService, oauth *handlerOAuthService) *Handler {
+	return &Handler{
+		Svc:    port.Service{Auth: auth, User: user, OAuth: oauth},
+		Tokens: handlerTokenService{},
+		OAuth:  oauth,
+	}
 }
 
 func newErrorRouter(h gin.HandlerFunc) *gin.Engine {
@@ -309,4 +316,5 @@ func TestUserHandlers(t *testing.T) {
 var _ port.AuthService = (*handlerAuthService)(nil)
 var _ port.UserService = (*handlerUserService)(nil)
 var _ port.OAuthService = (*handlerOAuthService)(nil)
+var _ OAuthFlow = (*handlerOAuthService)(nil)
 var _ port.TokenService = (handlerTokenService{})

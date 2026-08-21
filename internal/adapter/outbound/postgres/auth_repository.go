@@ -8,14 +8,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
 type authRepository struct {
-	q    *Queries
-	pool *pgxpool.Pool
+	q *Queries
 }
 
 func (r *authRepository) CreateVerifyEmail(ctx context.Context, ve domain.VerifyEmail) error {

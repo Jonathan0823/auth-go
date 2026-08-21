@@ -23,7 +23,11 @@ func (h *Handler) OAuthLogin(c *gin.Context) {
 	if !h.allowRateLimit(c, ipRateLimit("oauth_ip", c)) {
 		return
 	}
-	h.Svc.OAuth.BeginAuth(c.Writer, c.Request, c.Param("provider"))
+	if h.OAuth == nil {
+		_ = c.Error(fmt.Errorf("oauth is unavailable"))
+		return
+	}
+	h.OAuth.BeginAuth(c.Writer, c.Request, c.Param("provider"))
 }
 
 // OAuthCallback completes the OAuth authorization flow and returns the authenticated user.
@@ -42,7 +46,18 @@ func (h *Handler) OAuthCallback(c *gin.Context) {
 	if !h.allowRateLimit(c, ipRateLimit("oauth_ip", c)) {
 		return
 	}
-	userData, err := h.Svc.OAuth.OAuthLogin(ctx, c.Writer, c.Request, c.Param("provider"))
+	if h.OAuth == nil {
+		_ = c.Error(fmt.Errorf("oauth is unavailable"))
+		return
+	}
+	profile, err := h.OAuth.CompleteAuth(c.Writer, c.Request, c.Param("provider"))
+	if err != nil {
+		authErr := fmt.Errorf("oauth authentication failed: %w", domain.ErrUnauthenticated)
+		h.auditFailure(c, platform.EventAuthOAuth, c.Param("provider"), authErr, 0)
+		_ = c.Error(authErr)
+		return
+	}
+	userData, err := h.Svc.OAuth.Login(ctx, profile)
 	if err != nil {
 		authErr := fmt.Errorf("oauth authentication failed: %w", domain.ErrUnauthenticated)
 		h.auditFailure(c, platform.EventAuthOAuth, c.Param("provider"), authErr, 0)
