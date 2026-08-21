@@ -223,9 +223,20 @@ func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userA
 		return "", "", fmt.Errorf("hash refresh token: %w", err)
 	}
 
+	accessToken, newRawToken, reused, err := s.refreshTokensInTransaction(ctx, hash, ip, userAgent)
+	if err != nil {
+		return "", "", err
+	}
+	if reused {
+		return "", "", fmt.Errorf("%w: %w", ErrRefreshTokenReused, domain.ErrUnauthenticated)
+	}
+	return accessToken, newRawToken, nil
+}
+
+func (s *authService) refreshTokensInTransaction(ctx context.Context, hash []byte, ip, userAgent string) (string, string, bool, error) {
 	var accessToken, newRawToken string
 	var reused bool
-	err = s.repo.WithTx(ctx, func(u port.UnitOfWork) error {
+	err := s.repo.WithTx(ctx, func(u port.UnitOfWork) error {
 		token, err := s.lookupRefreshToken(ctx, u.Auth(), hash)
 		if err != nil {
 			return err
@@ -252,13 +263,7 @@ func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userA
 		newRawToken, err = s.rotateRefreshToken(ctx, u.Auth(), token, ip, userAgent)
 		return err
 	})
-	if err != nil {
-		return "", "", err
-	}
-	if reused {
-		return "", "", fmt.Errorf("%w: %w", ErrRefreshTokenReused, domain.ErrUnauthenticated)
-	}
-	return accessToken, newRawToken, nil
+	return accessToken, newRawToken, reused, err
 }
 
 func (s *authService) lookupRefreshToken(ctx context.Context, auth port.AuthRepository, hash []byte) (*domain.RefreshToken, error) {

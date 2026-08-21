@@ -33,9 +33,21 @@ func TestConfigValidate(t *testing.T) {
 	}
 
 	cfg = validConfig()
+	cfg.Environment = "invalid"
+	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "ENVIRONMENT") {
+		t.Fatalf("invalid environment error = %v", err)
+	}
+
+	cfg = validConfig()
 	cfg.AllowedOrigins = []string{"https://example.com", "not-an-origin"}
 	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "ALLOWED_ORIGINS[1]") {
 		t.Fatalf("invalid second origin error = %v", err)
+	}
+
+	cfg = validConfig()
+	cfg.AllowedOrigins = nil
+	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "ALLOWED_ORIGINS") {
+		t.Fatalf("missing origins error = %v", err)
 	}
 
 	cfg = validConfig()
@@ -48,6 +60,19 @@ func TestConfigValidate(t *testing.T) {
 	cfg.GitHubClientID = "id"
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("Validate succeeded with partial GitHub configuration")
+	}
+
+	cfg = validConfig()
+	cfg.GoogleClientSecret = "secret"
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Validate succeeded with partial Google configuration")
+	}
+
+	cfg = validConfig()
+	cfg.Environment = "production"
+	cfg.RateLimit.AllowMemoryInProduction = true
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("valid production config error = %v", err)
 	}
 
 	cfg = validConfig()

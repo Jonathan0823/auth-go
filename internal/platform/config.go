@@ -64,12 +64,32 @@ func (c Config) Validate() error {
 	if c.Environment != "development" && c.Environment != "test" && c.Environment != "production" {
 		return fmt.Errorf("ENVIRONMENT must be development, test, or production")
 	}
+	if err := c.validateAllowedOrigins(); err != nil {
+		return err
+	}
+	if err := c.validateRequiredSettings(); err != nil {
+		return err
+	}
+	if err := c.validateOAuthSettings(); err != nil {
+		return err
+	}
+	if err := c.validateProductionSecrets(); err != nil {
+		return err
+	}
+	return c.RateLimit.Validate(c.Environment)
+}
+
+func (c Config) validateAllowedOrigins() error {
 	for index, origin := range c.AllowedOrigins {
 		parsed, err := url.ParseRequestURI(origin)
 		if origin != "*" && (err != nil || parsed.Scheme != "http" && parsed.Scheme != "https" || parsed.Hostname() == "" || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.User != nil) {
 			return fmt.Errorf("ALLOWED_ORIGINS[%d] is invalid: %q", index, origin)
 		}
 	}
+	return nil
+}
+
+func (c Config) validateRequiredSettings() error {
 	required := []struct{ name, value string }{
 		{"ALLOWED_ORIGINS", first(c.AllowedOrigins)},
 		{"BASE_URL", c.BaseURL},
@@ -85,26 +105,35 @@ func (c Config) Validate() error {
 			return fmt.Errorf("%s is required", setting.name)
 		}
 	}
+	return nil
+}
+
+func (c Config) validateOAuthSettings() error {
 	if (c.GitHubClientID == "") != (c.GitHubClientSecret == "") {
 		return fmt.Errorf("GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET must be configured together")
 	}
 	if (c.GoogleClientID == "") != (c.GoogleClientSecret == "") {
 		return fmt.Errorf("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured together")
 	}
-	if c.Environment == "production" {
-		secrets := []struct{ name, value string }{
-			{"JWT_ACCESS_SECRET", c.JWTAccessSecret},
-			{"REFRESH_TOKEN_HASH_KEY", c.RefreshTokenHashKey},
-			{"SESSION_SECRET", c.SessionSecret},
-			{"RATE_LIMIT_KEY", c.RateLimit.Key},
-		}
-		for _, secret := range secrets {
-			if len(secret.value) < 32 {
-				return fmt.Errorf("%s must be at least 32 bytes in production", secret.name)
-			}
+	return nil
+}
+
+func (c Config) validateProductionSecrets() error {
+	if c.Environment != "production" {
+		return nil
+	}
+	secrets := []struct{ name, value string }{
+		{"JWT_ACCESS_SECRET", c.JWTAccessSecret},
+		{"REFRESH_TOKEN_HASH_KEY", c.RefreshTokenHashKey},
+		{"SESSION_SECRET", c.SessionSecret},
+		{"RATE_LIMIT_KEY", c.RateLimit.Key},
+	}
+	for _, secret := range secrets {
+		if len(secret.value) < 32 {
+			return fmt.Errorf("%s must be at least 32 bytes in production", secret.name)
 		}
 	}
-	return c.RateLimit.Validate(c.Environment)
+	return nil
 }
 
 func first(values []string) string {
