@@ -2,6 +2,7 @@ package platform
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 )
 
@@ -62,6 +63,12 @@ func LoadConfig() Config {
 func (c Config) Validate() error {
 	if c.Environment != "development" && c.Environment != "test" && c.Environment != "production" {
 		return fmt.Errorf("ENVIRONMENT must be development, test, or production")
+	}
+	for index, origin := range c.AllowedOrigins {
+		parsed, err := url.ParseRequestURI(origin)
+		if origin != "*" && (err != nil || parsed.Scheme != "http" && parsed.Scheme != "https" || parsed.Hostname() == "" || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.User != nil) {
+			return fmt.Errorf("ALLOWED_ORIGINS[%d] is invalid: %q", index, origin)
+		}
 	}
 	required := []struct{ name, value string }{
 		{"ALLOWED_ORIGINS", first(c.AllowedOrigins)},

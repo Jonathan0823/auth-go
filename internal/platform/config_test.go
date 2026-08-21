@@ -32,6 +32,13 @@ func TestConfigValidate(t *testing.T) {
 		t.Fatalf("Validate() error = %v", err)
 	}
 
+	cfg = validConfig()
+	cfg.AllowedOrigins = []string{"https://example.com", "not-an-origin"}
+	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "ALLOWED_ORIGINS[1]") {
+		t.Fatalf("invalid second origin error = %v", err)
+	}
+
+	cfg = validConfig()
 	cfg.DatabaseURL = ""
 	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "DATABASE_URL") {
 		t.Fatalf("missing database error = %v", err)
