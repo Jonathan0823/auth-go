@@ -328,8 +328,38 @@ func TestUserService(t *testing.T) {
 func TestOAuthService(t *testing.T) {
 	_, users, _, _ := newAuthFakes()
 	profile := domain.OAuthProfile{UserID: "oauth-id", Email: "oauth@example.com", Name: "OAuth", Provider: "github"}
-	svc := NewOAuthService(users)
 
+	validationTests := []struct {
+		name    string
+		profile domain.OAuthProfile
+	}{
+		{"missing user ID", domain.OAuthProfile{Email: profile.Email, Provider: profile.Provider}},
+		{"missing email", domain.OAuthProfile{UserID: profile.UserID, Provider: profile.Provider}},
+		{"missing provider", domain.OAuthProfile{UserID: profile.UserID, Email: profile.Email}},
+	}
+	for _, tt := range validationTests {
+		t.Run(tt.name, func(t *testing.T) {
+			var createCalled, getByEmailCalled bool
+			users := &fakeUserRepository{
+				createFn: func(context.Context, domain.User) error {
+					createCalled = true
+					return nil
+				},
+				getByEmailFn: func(context.Context, string, bool) (*domain.User, error) {
+					getByEmailCalled = true
+					return nil, nil
+				},
+			}
+			if _, err := NewOAuthService(users).Login(context.Background(), tt.profile); !errors.Is(err, domain.ErrInvalidInput) {
+				t.Fatalf("Login error = %v, want invalid input", err)
+			}
+			if createCalled || getByEmailCalled {
+				t.Fatalf("repository called: create=%v, getByEmail=%v", createCalled, getByEmailCalled)
+			}
+		})
+	}
+
+	svc := NewOAuthService(users)
 	users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) {
 		return &domain.User{ID: 1, Email: profile.Email}, nil
 	}
