@@ -1,7 +1,9 @@
 package bootstrap
 
 import (
-	"log"
+	"context"
+	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -16,17 +18,24 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/platform"
 )
 
-func Run(cfg platform.Config) {
-	if err := cfg.RateLimit.Validate(cfg.Environment); err != nil {
-		log.Fatal(err)
+func Run(ctx context.Context, cfg platform.Config) error {
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("validate configuration: %w", err)
 	}
-	pool := platform.NewPool()
+
+	startupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	pool, err := platform.NewPool(startupCtx, cfg.DatabaseURL)
+	cancel()
+	if err != nil {
+		return err
+	}
 	defer pool.Close()
 
 	repo := outpostgres.NewRepository(pool)
-	tokens := outjwt.NewTokenService()
-	email := outemail.NewSender()
+	tokens := outjwt.NewTokenService(cfg.JWTAccessSecret, cfg.RefreshTokenHashKey)
+	email := outemail.NewSender(cfg.EmailAddress, cfg.EmailPassword)
 	hasher := outpassword.NewHasher()
+	svc := service.New(repo, tokens, email, hasher, cfg.BaseURL)
 	oauth := outoauth.New(outoauth.Config{
 		BaseURL:            cfg.BaseURL,
 		SessionSecret:      cfg.SessionSecret,
@@ -34,32 +43,36 @@ func Run(cfg platform.Config) {
 		GitHubClientSecret: cfg.GitHubClientSecret,
 		GoogleClientID:     cfg.GoogleClientID,
 		GoogleClientSecret: cfg.GoogleClientSecret,
+		SecureCookies:      cfg.Environment == "production",
 	})
-	svc := service.New(repo, tokens, email, hasher, cfg.BaseURL, oauth)
 
 	r := gin.New()
 	if err := r.SetTrustedProxies(cfg.RateLimit.TrustedProxies); err != nil {
-		log.Fatal("invalid trusted proxies configuration")
+		return fmt.Errorf("configure trusted proxies: %w", err)
 	}
 	logger := platform.NewLogger(cfg.LogLevel)
 	metrics := platform.NewMetrics(pool)
 	audit := platform.NewAuditLogger(logger, metrics)
 	rateLimitStore, redisClient, err := newRateLimitStore(cfg.RateLimit, pool)
 	if err != nil {
-		log.Fatal("rate-limit backend is unavailable")
+		return fmt.Errorf("create rate-limit backend: %w", err)
 	}
 	defer func() { _ = rateLimitStore.Close() }()
 	if redisClient != nil {
 		defer func() { _ = redisClient.Close() }()
 	}
 
+	r.Use(platform.CORS(cfg))
 	r.Use(inhttpmw.RequestID())
 	if cfg.EnableMetrics {
 		r.Use(inhttpmw.Metrics(metrics))
 	}
 	r.Use(inhttpmw.RequestLogger(logger))
 
-	handler := inhttp.NewHandler(svc, tokens)
+	handler := inhttp.NewHandler(svc, tokens, oauth, inhttp.HandlerConfig{
+		CookieDomain: cfg.Domain,
+		SecureCookie: cfg.Environment == "production",
+	})
 	handler.Audit = audit
 	handler.RateLimiter = platform.NewRateLimiter(rateLimitStore, cfg.RateLimit.Key, cfg.RateLimit.Policies)
 	inhttp.RegisterRoutes(r, handler, logger)
@@ -67,5 +80,5 @@ func Run(cfg platform.Config) {
 	inhttp.RegisterHealthRoutes(r, pool)
 	inhttp.RegisterMetricsRoute(r, metrics, cfg.EnableMetrics)
 
-	platform.InitServer(r, cfg)
+	return platform.RunServer(ctx, r, cfg)
 }

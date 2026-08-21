@@ -6,8 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"log"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -17,16 +15,22 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/core/port"
 )
 
-type tokenService struct{}
+type tokenService struct {
+	accessSecret   []byte
+	refreshHashKey []byte
+}
 
-func NewTokenService() port.TokenService {
-	return &tokenService{}
+func NewTokenService(accessSecret, refreshHashKey string) port.TokenService {
+	return &tokenService{
+		accessSecret:   []byte(accessSecret),
+		refreshHashKey: []byte(refreshHashKey),
+	}
 }
 
 func (s *tokenService) GenerateAccessToken(user domain.User) (token, jti string, err error) {
-	secret := []byte(os.Getenv("JWT_ACCESS_SECRET"))
+	secret := s.accessSecret
 	if len(secret) == 0 {
-		log.Fatal("JWT_ACCESS_SECRET is not set")
+		return "", "", fmt.Errorf("access token secret is empty")
 	}
 	jti = uuid.New().String()
 	claims := jwt.MapClaims{
@@ -41,13 +45,13 @@ func (s *tokenService) GenerateAccessToken(user domain.User) (token, jti string,
 }
 
 func (s *tokenService) ValidateAccessToken(tokenString string) (map[string]any, error) {
-	secret := []byte(os.Getenv("JWT_ACCESS_SECRET"))
+	secret := s.accessSecret
 	if len(secret) == 0 {
-		log.Fatal("JWT_ACCESS_SECRET is not set")
+		return nil, fmt.Errorf("access token secret is empty")
 	}
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (any, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		if t.Method != jwt.SigningMethodHS256 {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return secret, nil
@@ -62,9 +66,9 @@ func (s *tokenService) ValidateAccessToken(tokenString string) (map[string]any, 
 }
 
 func (s *tokenService) GenerateRefreshToken() (rawToken string, hmacHash []byte, err error) {
-	key := []byte(os.Getenv("REFRESH_TOKEN_HASH_KEY"))
+	key := s.refreshHashKey
 	if len(key) == 0 {
-		log.Fatal("REFRESH_TOKEN_HASH_KEY is not set")
+		return "", nil, fmt.Errorf("refresh token hash key is empty")
 	}
 
 	bytes := make([]byte, 32)
@@ -82,9 +86,9 @@ func (s *tokenService) GenerateRefreshToken() (rawToken string, hmacHash []byte,
 }
 
 func (s *tokenService) HashRefreshToken(rawToken string) ([]byte, error) {
-	key := []byte(os.Getenv("REFRESH_TOKEN_HASH_KEY"))
+	key := s.refreshHashKey
 	if len(key) == 0 {
-		return nil, fmt.Errorf("REFRESH_TOKEN_HASH_KEY is not set")
+		return nil, fmt.Errorf("refresh token hash key is empty")
 	}
 
 	mac := hmac.New(sha256.New, key)
