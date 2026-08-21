@@ -3,6 +3,7 @@ package oauth
 import (
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
@@ -42,21 +43,26 @@ func configure(cfg Config) {
 	store.Options.SameSite = http.SameSiteLaxMode
 
 	gothic.Store = store
+	httpClient := &http.Client{Timeout: 10 * time.Second}
 	providers := make([]goth.Provider, 0, 2)
 	if cfg.GitHubClientID != "" {
-		providers = append(providers, github.New(
+		provider := github.New(
 			cfg.GitHubClientID,
 			cfg.GitHubClientSecret,
 			cfg.BaseURL+"/api/oauth/github/callback",
 			"user:email",
-		))
+		)
+		provider.HTTPClient = httpClient
+		providers = append(providers, provider)
 	}
 	if cfg.GoogleClientID != "" {
-		providers = append(providers, google.New(
+		provider := google.New(
 			cfg.GoogleClientID,
 			cfg.GoogleClientSecret,
 			cfg.BaseURL+"/api/oauth/google/callback",
-		))
+		)
+		provider.HTTPClient = httpClient
+		providers = append(providers, provider)
 	}
 	goth.ClearProviders()
 	goth.UseProviders(providers...)
