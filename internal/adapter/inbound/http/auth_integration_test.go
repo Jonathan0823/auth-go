@@ -50,13 +50,13 @@ func setupAuthServer(t *testing.T) (*gin.Engine, *pgxpool.Pool, port.Repository,
 	t.Cleanup(pool.Close)
 
 	repo := outpostgres.NewRepository(pool)
-	tokens := outjwt.NewTokenService()
-	svc := service.New(repo, tokens, integrationEmailSender{}, outpassword.NewHasher(), "http://localhost:8080", nil)
+	tokens := outjwt.NewTokenService(os.Getenv("JWT_ACCESS_SECRET"), os.Getenv("REFRESH_TOKEN_HASH_KEY"))
+	svc := service.New(repo, tokens, integrationEmailSender{}, outpassword.NewHasher(), "http://localhost:8080")
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	inhttp.RegisterRoutes(router, inhttp.NewHandler(svc, tokens), logger)
+	inhttp.RegisterRoutes(router, inhttp.NewHandler(svc, tokens, nil, inhttp.HandlerConfig{}), logger)
 	return router, pool, repo, tokens
 }
 

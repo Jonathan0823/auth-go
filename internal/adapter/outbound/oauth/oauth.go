@@ -10,7 +10,7 @@ import (
 	"github.com/markbates/goth/providers/github"
 	"github.com/markbates/goth/providers/google"
 
-	"github.com/Jonathan0823/auth-go/internal/core/port"
+	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
 // ponytail: global lock around gothic's provider hook; switch to provider-scoped auth if throughput matters.
@@ -23,13 +23,14 @@ type Config struct {
 	GitHubClientSecret string
 	GoogleClientID     string
 	GoogleClientSecret string
+	SecureCookies      bool
 }
 
-type client struct{}
+type Client struct{}
 
-func New(cfg Config) port.OAuthClient {
+func New(cfg Config) *Client {
 	configure(cfg)
-	return &client{}
+	return &Client{}
 }
 
 func configure(cfg Config) {
@@ -37,32 +38,37 @@ func configure(cfg Config) {
 	store.MaxAge(86400 * 30)
 	store.Options.Path = "/"
 	store.Options.HttpOnly = true
-	store.Options.Secure = false
+	store.Options.Secure = cfg.SecureCookies
 	store.Options.SameSite = http.SameSiteLaxMode
 
 	gothic.Store = store
-	goth.UseProviders(
-		github.New(
+	providers := make([]goth.Provider, 0, 2)
+	if cfg.GitHubClientID != "" {
+		providers = append(providers, github.New(
 			cfg.GitHubClientID,
 			cfg.GitHubClientSecret,
-			cfg.BaseURL+"/api/auth/github/callback",
+			cfg.BaseURL+"/api/oauth/github/callback",
 			"user:email",
-		),
-		google.New(
+		))
+	}
+	if cfg.GoogleClientID != "" {
+		providers = append(providers, google.New(
 			cfg.GoogleClientID,
 			cfg.GoogleClientSecret,
-			cfg.BaseURL+"/api/auth/google/callback",
-		),
-	)
+			cfg.BaseURL+"/api/oauth/google/callback",
+		))
+	}
+	goth.ClearProviders()
+	goth.UseProviders(providers...)
 }
 
-func (c *client) BeginAuth(w http.ResponseWriter, r *http.Request, provider string) {
+func (c *Client) BeginAuth(w http.ResponseWriter, r *http.Request, provider string) {
 	withProvider(provider, func() {
 		gothic.BeginAuthHandler(w, r)
 	})
 }
 
-func (c *client) CompleteAuth(w http.ResponseWriter, r *http.Request, provider string) (port.OAuthProfile, error) {
+func (c *Client) CompleteAuth(w http.ResponseWriter, r *http.Request, provider string) (domain.OAuthProfile, error) {
 	var user goth.User
 	err := withProviderErr(provider, func() error {
 		var err error
@@ -70,13 +76,13 @@ func (c *client) CompleteAuth(w http.ResponseWriter, r *http.Request, provider s
 		return err
 	})
 	if err != nil {
-		return port.OAuthProfile{}, err
+		return domain.OAuthProfile{}, err
 	}
 	return profileFromUser(user), nil
 }
 
-func profileFromUser(user goth.User) port.OAuthProfile {
-	return port.OAuthProfile{
+func profileFromUser(user goth.User) domain.OAuthProfile {
+	return domain.OAuthProfile{
 		UserID:    user.UserID,
 		Email:     user.Email,
 		Name:      firstNonEmpty(user.NickName, user.Name),

@@ -4,31 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 	"github.com/Jonathan0823/auth-go/internal/core/port"
 )
 
 type oAuthService struct {
-	repo  port.Repository
-	oauth port.OAuthClient
+	users port.UserRepository
 }
 
-func NewOAuthService(repo port.Repository, oauth port.OAuthClient) port.OAuthService {
-	return &oAuthService{repo: repo, oauth: oauth}
+func NewOAuthService(users port.UserRepository) port.OAuthService {
+	return &oAuthService{users: users}
 }
 
-func (s *oAuthService) BeginAuth(w http.ResponseWriter, r *http.Request, provider string) {
-	s.oauth.BeginAuth(w, r, provider)
-}
-
-func (s *oAuthService) OAuthLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, provider string) (*domain.User, error) {
-	profile, err := s.oauth.CompleteAuth(w, r, provider)
-	if err != nil {
-		return nil, fmt.Errorf("complete oauth authentication: %w", domain.ErrUnauthenticated)
-	}
-
+func (s *oAuthService) Login(ctx context.Context, profile domain.OAuthProfile) (*domain.User, error) {
 	user := domain.User{
 		OAuthID:   profile.UserID,
 		Email:     profile.Email,
@@ -36,11 +25,11 @@ func (s *oAuthService) OAuthLogin(ctx context.Context, w http.ResponseWriter, r 
 		Provider:  profile.Provider,
 		AvatarURL: profile.AvatarURL,
 	}
-	if err := s.repo.Users().Create(ctx, user); err != nil && !errors.Is(err, domain.ErrConflict) {
+	if err := s.users.Create(ctx, user); err != nil && !errors.Is(err, domain.ErrConflict) {
 		return nil, fmt.Errorf("create oauth user: %w", err)
 	}
 
-	userData, err := s.repo.Users().GetByEmail(ctx, user.Email, false)
+	userData, err := s.users.GetByEmail(ctx, user.Email, false)
 	if err != nil {
 		return nil, fmt.Errorf("get oauth user: %w", err)
 	}

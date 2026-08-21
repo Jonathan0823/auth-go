@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -167,30 +165,26 @@ func (f *fakeAuthRepository) RevokeRefreshTokenFamily(ctx context.Context, id uu
 }
 
 type fakeUnitOfWork struct {
-	users       port.UserRepository
-	auth        port.AuthRepository
-	commitErr   error
-	rollbackErr error
+	users port.UserRepository
+	auth  port.AuthRepository
 }
 
 func (f *fakeUnitOfWork) Users() port.UserRepository { return f.users }
 func (f *fakeUnitOfWork) Auth() port.AuthRepository  { return f.auth }
-func (f *fakeUnitOfWork) Commit() error              { return f.commitErr }
-func (f *fakeUnitOfWork) Rollback() error            { return f.rollbackErr }
 
 type fakeRepository struct {
-	users     port.UserRepository
-	auth      port.AuthRepository
-	tx        port.UnitOfWork
-	beginErr  error
-	withTxErr error
-	withTxFn  func(port.UnitOfWork) error
+	users       port.UserRepository
+	auth        port.AuthRepository
+	tx          port.UnitOfWork
+	withTxErr   error
+	withTxFn    func(port.UnitOfWork) error
+	withTxCalls int
 }
 
-func (f *fakeRepository) Begin(context.Context) (port.UnitOfWork, error) { return f.tx, f.beginErr }
-func (f *fakeRepository) Users() port.UserRepository                     { return f.users }
-func (f *fakeRepository) Auth() port.AuthRepository                      { return f.auth }
+func (f *fakeRepository) Users() port.UserRepository { return f.users }
+func (f *fakeRepository) Auth() port.AuthRepository  { return f.auth }
 func (f *fakeRepository) WithTx(_ context.Context, fn func(port.UnitOfWork) error) error {
+	f.withTxCalls++
 	if f.withTxFn != nil {
 		return f.withTxFn(f.tx)
 	}
@@ -254,18 +248,6 @@ func (f *fakeEmailSender) Send(string, string, string) error {
 	return f.err
 }
 
-type fakeOAuthClient struct {
-	profile port.OAuthProfile
-	err     error
-	called  bool
-}
-
-func (f *fakeOAuthClient) BeginAuth(http.ResponseWriter, *http.Request, string) { f.called = true }
-func (f *fakeOAuthClient) CompleteAuth(http.ResponseWriter, *http.Request, string) (port.OAuthProfile, error) {
-	f.called = true
-	return f.profile, f.err
-}
-
 func newAuthFakes() (*fakeRepository, *fakeUserRepository, *fakeAuthRepository, *fakeEmailSender) {
 	users := &fakeUserRepository{}
 	auth := &fakeAuthRepository{}
@@ -277,11 +259,11 @@ func newAuthFakes() (*fakeRepository, *fakeUserRepository, *fakeAuthRepository, 
 func TestUserService(t *testing.T) {
 	user := &domain.User{ID: 7, Email: "user@example.com"}
 	t.Run("gets users", func(t *testing.T) {
-		repo, users, _, _ := newAuthFakes()
+		_, users, _, _ := newAuthFakes()
 		users.getByIDFn = func(context.Context, int) (*domain.User, error) { return user, nil }
 		users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) { return user, nil }
 		users.getAllFn = func(context.Context) ([]*domain.User, error) { return []*domain.User{user}, nil }
-		svc := NewUserService(repo)
+		svc := NewUserService(users)
 		if got, err := svc.GetByID(context.Background(), user.ID); err != nil || got != user {
 			t.Fatalf("GetByID = %#v, %v", got, err)
 		}
@@ -294,10 +276,10 @@ func TestUserService(t *testing.T) {
 	})
 
 	t.Run("returns lookup errors and not found", func(t *testing.T) {
-		repo, users, _, _ := newAuthFakes()
+		_, users, _, _ := newAuthFakes()
 		users.getByIDFn = func(context.Context, int) (*domain.User, error) { return nil, errFake }
 		users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) { return nil, errFake }
-		svc := NewUserService(repo)
+		svc := NewUserService(users)
 		if _, err := svc.GetByID(context.Background(), 1); !errors.Is(err, errFake) {
 			t.Fatalf("GetByID error = %v", err)
 		}
@@ -315,8 +297,8 @@ func TestUserService(t *testing.T) {
 	})
 
 	t.Run("handles list and mutations", func(t *testing.T) {
-		repo, users, _, _ := newAuthFakes()
-		svc := NewUserService(repo)
+		_, users, _, _ := newAuthFakes()
+		svc := NewUserService(users)
 		users.getAllFn = func(context.Context) ([]*domain.User, error) { return nil, errFake }
 		if _, err := svc.GetAll(context.Background()); !errors.Is(err, errFake) {
 			t.Fatalf("GetAll error = %v", err)
@@ -344,34 +326,25 @@ func TestUserService(t *testing.T) {
 }
 
 func TestOAuthService(t *testing.T) {
-	repo, users, _, _ := newAuthFakes()
-	oauth := &fakeOAuthClient{profile: port.OAuthProfile{UserID: "oauth-id", Email: "oauth@example.com", Name: "OAuth", Provider: "github"}}
-	svc := NewOAuthService(repo, oauth)
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	svc.BeginAuth(w, r, "github")
-	if !oauth.called {
-		t.Fatal("BeginAuth did not call the OAuth client")
-	}
+	_, users, _, _ := newAuthFakes()
+	profile := domain.OAuthProfile{UserID: "oauth-id", Email: "oauth@example.com", Name: "OAuth", Provider: "github"}
+	svc := NewOAuthService(users)
 
 	users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) {
-		return &domain.User{ID: 1, Email: "oauth@example.com"}, nil
+		return &domain.User{ID: 1, Email: profile.Email}, nil
 	}
-	if user, err := svc.OAuthLogin(context.Background(), w, r, "github"); err != nil || user.ID != 1 {
-		t.Fatalf("OAuthLogin = %#v, %v", user, err)
+	if user, err := svc.Login(context.Background(), profile); err != nil || user.ID != 1 {
+		t.Fatalf("Login = %#v, %v", user, err)
 	}
 
 	tests := []struct {
 		name  string
 		setup func()
 	}{
-		{"complete error", func() { oauth.err = errFake }},
 		{"create error", func() {
-			oauth.err = nil
 			users.createFn = func(context.Context, domain.User) error { return errFake }
 		}},
 		{"get error", func() {
-			users.createFn = nil
 			users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) { return nil, errFake }
 		}},
 		{"not found", func() {
@@ -380,23 +353,22 @@ func TestOAuthService(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			oauth.err = nil
 			users.createFn = nil
 			users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) {
-				return &domain.User{ID: 1, Email: "oauth@example.com"}, nil
+				return &domain.User{ID: 1, Email: profile.Email}, nil
 			}
 			tt.setup()
-			if _, err := svc.OAuthLogin(context.Background(), w, r, "github"); err == nil {
-				t.Fatal("OAuthLogin succeeded unexpectedly")
+			if _, err := svc.Login(context.Background(), profile); err == nil {
+				t.Fatal("Login succeeded unexpectedly")
 			}
 		})
 	}
 
 	users.createFn = func(context.Context, domain.User) error { return domain.ErrConflict }
 	users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) {
-		return &domain.User{ID: 2, Email: "oauth@example.com"}, nil
+		return &domain.User{ID: 2, Email: profile.Email}, nil
 	}
-	if _, err := svc.OAuthLogin(context.Background(), w, r, "github"); err != nil {
+	if _, err := svc.Login(context.Background(), profile); err != nil {
 		t.Fatalf("conflict create should continue: %v", err)
 	}
 }
@@ -449,6 +421,9 @@ func TestAuthServiceRegisterAndEmailFlows(t *testing.T) {
 		}
 		if err := NewAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost").Register(context.Background(), user); err != nil {
 			t.Fatalf("Register = %v", err)
+		}
+		if repo.withTxCalls != 1 {
+			t.Fatalf("Register transactions = %d, want 1", repo.withTxCalls)
 		}
 	})
 
@@ -621,10 +596,13 @@ func TestAuthServiceRefreshAndLogout(t *testing.T) {
 	}
 
 	t.Run("refresh success", func(t *testing.T) {
-		svc, _, _, _, _ := newService()
+		svc, repo, _, _, _ := newService()
 		access, refresh, err := svc.RefreshTokens(context.Background(), "old", "127.0.0.1", "agent")
 		if err != nil || access != "access" || refresh != "new-refresh" {
 			t.Fatalf("RefreshTokens = %q, %q, %v", access, refresh, err)
+		}
+		if repo.withTxCalls != 1 {
+			t.Fatalf("RefreshTokens transactions = %d, want 1", repo.withTxCalls)
 		}
 	})
 
@@ -636,8 +614,8 @@ func TestAuthServiceRefreshAndLogout(t *testing.T) {
 			{"hash", func(_ *authService, _ *fakeRepository, _ *fakeUserRepository, _ *fakeAuthRepository, tokens *fakeTokens) {
 				tokens.hashErr = errFake
 			}},
-			{"begin", func(_ *authService, repo *fakeRepository, _ *fakeUserRepository, _ *fakeAuthRepository, _ *fakeTokens) {
-				repo.beginErr = errFake
+			{"transaction", func(_ *authService, repo *fakeRepository, _ *fakeUserRepository, _ *fakeAuthRepository, _ *fakeTokens) {
+				repo.withTxErr = errFake
 			}},
 			{"lookup", func(_ *authService, _ *fakeRepository, _ *fakeUserRepository, auth *fakeAuthRepository, _ *fakeTokens) {
 				auth.getRefreshTokenByHashFn = func(context.Context, []byte) (*domain.RefreshToken, error) { return nil, errFake }
@@ -671,9 +649,6 @@ func TestAuthServiceRefreshAndLogout(t *testing.T) {
 			}},
 			{"create new token", func(_ *authService, _ *fakeRepository, _ *fakeUserRepository, auth *fakeAuthRepository, _ *fakeTokens) {
 				auth.createRefreshTokenFn = func(context.Context, domain.RefreshToken) error { return errFake }
-			}},
-			{"commit", func(_ *authService, repo *fakeRepository, _ *fakeUserRepository, _ *fakeAuthRepository, _ *fakeTokens) {
-				repo.tx.(*fakeUnitOfWork).commitErr = errFake
 			}},
 			{"get user", func(_ *authService, _ *fakeRepository, users *fakeUserRepository, _ *fakeAuthRepository, _ *fakeTokens) {
 				users.getByIDFn = func(context.Context, int) (*domain.User, error) { return nil, errFake }
@@ -741,4 +716,3 @@ var _ port.UnitOfWork = (*fakeUnitOfWork)(nil)
 var _ port.TokenService = (fakeTokens{})
 var _ port.PasswordHasher = (fakeHasher{})
 var _ port.EmailSender = (*fakeEmailSender)(nil)
-var _ port.OAuthClient = (*fakeOAuthClient)(nil)

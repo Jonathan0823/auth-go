@@ -3,8 +3,10 @@ package oauth
 import (
 	"errors"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 )
@@ -34,7 +36,29 @@ func TestFirstNonEmpty(t *testing.T) {
 }
 
 func TestNewAndProviderHooks(t *testing.T) {
-	New(Config{BaseURL: "http://localhost", SessionSecret: "session-secret"})
+	New(Config{
+		BaseURL:            "https://example.com",
+		SessionSecret:      "session-secret",
+		GitHubClientID:     "github-id",
+		GitHubClientSecret: "github-secret",
+		SecureCookies:      true,
+	})
+	store, ok := gothic.Store.(*sessions.CookieStore)
+	if !ok || !store.Options.Secure {
+		t.Fatal("OAuth session cookie is not secure")
+	}
+	provider, err := goth.GetProvider("github")
+	if err != nil {
+		t.Fatalf("GitHub provider is not configured: %v", err)
+	}
+	session, err := provider.BeginAuth("state")
+	if err != nil {
+		t.Fatalf("BeginAuth() error = %v", err)
+	}
+	authURL, err := session.GetAuthURL()
+	if err != nil || !strings.Contains(authURL, "%2Fapi%2Foauth%2Fgithub%2Fcallback") {
+		t.Fatalf("OAuth callback URL = %q, error = %v", authURL, err)
+	}
 	req := httptest.NewRequest("GET", "/", nil)
 	withProvider("github", func() {
 		provider, err := gothic.GetProviderName(req)

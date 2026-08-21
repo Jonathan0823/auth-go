@@ -44,13 +44,17 @@ func (s *authService) Register(ctx context.Context, user domain.User) error {
 	}
 	user.Password = hashed
 
-	if err := s.repo.Users().Create(ctx, user); err != nil {
-		return fmt.Errorf("create user: %w", err)
+	var verification domain.VerifyEmail
+	if err := s.repo.WithTx(ctx, func(u port.UnitOfWork) error {
+		if err := u.Users().Create(ctx, user); err != nil {
+			return fmt.Errorf("create user: %w", err)
+		}
+		verification, err = createVerification(ctx, u.Users(), u.Auth(), user.Email)
+		return err
+	}); err != nil {
+		return fmt.Errorf("register user: %w", err)
 	}
-	if err := s.CreateVerifyEmail(ctx, user.Email); err != nil {
-		return fmt.Errorf("create verification email: %w", err)
-	}
-	return nil
+	return s.sendVerificationEmail(verification)
 }
 
 func (s *authService) Login(ctx context.Context, user domain.User) (string, string, error) {
@@ -96,24 +100,37 @@ func (s *authService) Login(ctx context.Context, user domain.User) (string, stri
 }
 
 func (s *authService) CreateVerifyEmail(ctx context.Context, email string) error {
-	userFromDB, err := s.repo.Users().GetByEmail(ctx, email, false)
+	verification, err := createVerification(ctx, s.repo.Users(), s.repo.Auth(), email)
 	if err != nil {
-		return fmt.Errorf(errGetUserByEmail, err)
+		return err
 	}
-	if userFromDB == nil {
-		return fmt.Errorf(errUserNotFound, domain.ErrNotFound)
+	return s.sendVerificationEmail(verification)
+}
+
+func createVerification(ctx context.Context, users port.UserRepository, auth port.AuthRepository, email string) (domain.VerifyEmail, error) {
+	user, err := users.GetByEmail(ctx, email, false)
+	if err != nil {
+		return domain.VerifyEmail{}, fmt.Errorf(errGetUserByEmail, err)
+	}
+	if user == nil {
+		return domain.VerifyEmail{}, fmt.Errorf(errUserNotFound, domain.ErrNotFound)
 	}
 
-	verifyEmail := domain.VerifyEmail{
+	verification := domain.VerifyEmail{
 		ID:        uuid.New(),
-		UserID:    userFromDB.ID,
+		UserID:    user.ID,
 		Email:     email,
-		ExpiredAt: time.Now().Add(1 * time.Hour),
+		ExpiredAt: time.Now().Add(time.Hour),
 	}
-	if err := s.repo.Auth().CreateVerifyEmail(ctx, verifyEmail); err != nil {
-		return fmt.Errorf("create verification email: %w", err)
+	if err := auth.CreateVerifyEmail(ctx, verification); err != nil {
+		return domain.VerifyEmail{}, fmt.Errorf("create verification email: %w", err)
 	}
-	if err := s.email.Send(email, "Verify Email", "Click here to verify your email"); err != nil {
+	return verification, nil
+}
+
+func (s *authService) sendVerificationEmail(verification domain.VerifyEmail) error {
+	body := fmt.Sprintf(`<a href="%s/api/auth/verify/email?id=%s">Verify email</a>`, s.baseURL, verification.ID)
+	if err := s.email.Send(verification.Email, "Verify Email", body); err != nil {
 		return fmt.Errorf("send verification email: %w", err)
 	}
 	return nil
@@ -124,20 +141,22 @@ func (s *authService) VerifyEmail(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid verification token: %w", domain.ErrInvalidInput)
 	}
 
-	verifyEmail, err := s.repo.Auth().GetVerifyEmailByID(ctx, id)
-	if err != nil {
-		return fmt.Errorf("get verification email: %w", err)
-	}
-	if verifyEmail.ID == uuid.Nil {
-		return fmt.Errorf("verification token not found: %w", domain.ErrNotFound)
-	}
-	if time.Now().After(verifyEmail.ExpiredAt) {
-		return fmt.Errorf("verification token expired: %w", domain.ErrInvalidInput)
-	}
-	if err := s.repo.Auth().VerifyEmail(ctx, id); err != nil {
-		return fmt.Errorf("verify email: %w", err)
-	}
-	return nil
+	return s.repo.WithTx(ctx, func(u port.UnitOfWork) error {
+		verification, err := u.Auth().GetVerifyEmailByID(ctx, id)
+		if err != nil {
+			return fmt.Errorf("get verification email: %w", err)
+		}
+		if verification.ID == uuid.Nil {
+			return fmt.Errorf("verification token not found: %w", domain.ErrNotFound)
+		}
+		if time.Now().After(verification.ExpiredAt) {
+			return fmt.Errorf("verification token expired: %w", domain.ErrInvalidInput)
+		}
+		if err := u.Auth().VerifyEmail(ctx, id); err != nil {
+			return fmt.Errorf("verify email: %w", err)
+		}
+		return nil
+	})
 }
 
 func (s *authService) ForgotPassword(ctx context.Context, email string) error {
@@ -204,48 +223,41 @@ func (s *authService) RefreshTokens(ctx context.Context, refreshToken, ip, userA
 		return "", "", fmt.Errorf("hash refresh token: %w", err)
 	}
 
-	tx, err := s.repo.Begin(ctx)
-	if err != nil {
-		return "", "", fmt.Errorf("begin refresh token transaction: %w", err)
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
+	var accessToken, newRawToken string
+	var reused bool
+	err = s.repo.WithTx(ctx, func(u port.UnitOfWork) error {
+		token, err := s.lookupRefreshToken(ctx, u.Auth(), hash)
+		if err != nil {
+			return err
+		}
+		if token.UsedAt != nil {
+			reused = true
+			if err := u.Auth().RevokeRefreshTokenFamily(ctx, token.FamilyID); err != nil {
+				return fmt.Errorf("revoke token family: %w", err)
+			}
+			return nil
+		}
 
-	token, err := s.lookupRefreshToken(ctx, tx.Auth(), hash)
+		user, err := u.Users().GetByID(ctx, token.UserID)
+		if err != nil {
+			return fmt.Errorf("get user: %w", err)
+		}
+		if user == nil {
+			return fmt.Errorf(errUserNotFound, domain.ErrNotFound)
+		}
+		accessToken, _, err = s.tokens.GenerateAccessToken(*user)
+		if err != nil {
+			return fmt.Errorf("generate access token: %w", err)
+		}
+		newRawToken, err = s.rotateRefreshToken(ctx, u.Auth(), token, ip, userAgent)
+		return err
+	})
 	if err != nil {
 		return "", "", err
 	}
-
-	if token.UsedAt != nil {
-		if err := s.revokeRefreshTokenFamily(ctx, tx, token.FamilyID); err != nil {
-			return "", "", err
-		}
+	if reused {
 		return "", "", fmt.Errorf("%w: %w", ErrRefreshTokenReused, domain.ErrUnauthenticated)
 	}
-
-	newRawToken, err := s.rotateRefreshToken(ctx, tx.Auth(), token, ip, userAgent)
-	if err != nil {
-		return "", "", err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return "", "", fmt.Errorf("commit refresh token transaction: %w", err)
-	}
-
-	userFromDB, err := s.repo.Users().GetByID(ctx, token.UserID)
-	if err != nil {
-		return "", "", fmt.Errorf("get user: %w", err)
-	}
-	if userFromDB == nil {
-		return "", "", fmt.Errorf(errUserNotFound, domain.ErrNotFound)
-	}
-
-	accessToken, _, err := s.tokens.GenerateAccessToken(*userFromDB)
-	if err != nil {
-		return "", "", fmt.Errorf("generate access token: %w", err)
-	}
-
 	return accessToken, newRawToken, nil
 }
 
@@ -264,16 +276,6 @@ func (s *authService) lookupRefreshToken(ctx context.Context, auth port.AuthRepo
 		return nil, fmt.Errorf("refresh token revoked: %w", domain.ErrUnauthenticated)
 	}
 	return token, nil
-}
-
-func (s *authService) revokeRefreshTokenFamily(ctx context.Context, tx port.UnitOfWork, familyID uuid.UUID) error {
-	if err := tx.Auth().RevokeRefreshTokenFamily(ctx, familyID); err != nil {
-		return fmt.Errorf("revoke token family: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit revocation: %w", err)
-	}
-	return nil
 }
 
 func (s *authService) rotateRefreshToken(ctx context.Context, auth port.AuthRepository, token *domain.RefreshToken, ip, userAgent string) (string, error) {
