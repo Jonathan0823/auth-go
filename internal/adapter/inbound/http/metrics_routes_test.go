@@ -7,13 +7,13 @@ import (
 	"testing"
 
 	inhttpmw "github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/middleware"
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/observability"
 	"github.com/gin-gonic/gin"
 )
 
 func TestMetricsMiddlewareUsesRouteTemplates(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	metrics := platform.NewMetrics(nil)
+	metrics := observability.NewMetrics(nil)
 	router := gin.New()
 	router.Use(inhttpmw.Metrics(metrics))
 	router.GET("/users/:id", func(c *gin.Context) {})
@@ -53,7 +53,7 @@ func TestMetricsRouteIsOptIn(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	for _, enabled := range []bool{false, true} {
 		t.Run(map[bool]string{false: "disabled", true: "enabled"}[enabled], func(t *testing.T) {
-			metrics := platform.NewMetrics(nil)
+			metrics := observability.NewMetrics(nil)
 			router := gin.New()
 			if enabled {
 				router.Use(inhttpmw.Metrics(metrics))

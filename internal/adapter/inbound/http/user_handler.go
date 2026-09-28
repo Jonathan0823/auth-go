@@ -22,10 +22,10 @@ func unauthenticatedError() error {
 // @Produce json
 // @Security CookieAuth
 // @Param id path int true "User ID"
-// @Success 200 {object} UserResponseEnvelope
-// @Failure 400 {object} ErrorResponse
-// @Failure 401 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
+// @Success 200 {object} dto.UserResponseEnvelope
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Router /api/user/{id} [get]
 func (h *Handler) GetUserByID(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
@@ -40,9 +40,9 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"message": "User retrieved successfully",
-		"user":    dto.UserResponseFromDomain(user),
+	c.JSON(http.StatusOK, dto.UserResponseEnvelope{
+		Message: "User retrieved successfully",
+		User:    dto.UserResponseFromDomain(user),
 	})
 }
 
@@ -52,9 +52,9 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 // @Tags users
 // @Produce json
 // @Security CookieAuth
-// @Success 200 {object} UsersResponseEnvelope
-// @Failure 401 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Success 200 {object} dto.UsersResponseEnvelope
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /api/user/get-all [get]
 func (h *Handler) GetAllUsers(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
@@ -64,9 +64,9 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Users retrieved successfully",
-		"users":   dto.UserResponsesFromDomain(users),
+	c.JSON(http.StatusOK, dto.UsersResponseEnvelope{
+		Message: "Users retrieved successfully",
+		Users:   dto.UserResponsesFromDomain(users),
 	})
 }
 
@@ -77,10 +77,10 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 // @Produce json
 // @Security CookieAuth
 // @Param email query string true "User email address"
-// @Success 200 {object} UserResponseEnvelope
-// @Failure 400 {object} ErrorResponse
-// @Failure 401 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
+// @Success 200 {object} dto.UserResponseEnvelope
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Router /api/user/email [get]
 func (h *Handler) GetUserByEmail(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
@@ -95,9 +95,9 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"message": "User retrieved successfully",
-		"user":    dto.UserResponseFromDomain(user),
+	c.JSON(http.StatusOK, dto.UserResponseEnvelope{
+		Message: "User retrieved successfully",
+		User:    dto.UserResponseFromDomain(user),
 	})
 }
 
@@ -109,10 +109,10 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 // @Produce json
 // @Security CookieAuth
 // @Param request body dto.UpdateUserRequest true "Profile updates"
-// @Success 200 {object} MessageResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 401 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Router /api/user/update [patch]
 func (h *Handler) UpdateUser(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
@@ -136,7 +136,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
+	c.JSON(http.StatusOK, dto.MessageResponse{Message: "User updated successfully"})
 }
 
 // DeleteUser deletes a user by ID when authorized by the authenticated user.
@@ -146,11 +146,11 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 // @Produce json
 // @Security CookieAuth
 // @Param id path int true "User ID"
-// @Success 200 {object} MessageResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 401 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Router /api/user/delete/{id} [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
@@ -169,7 +169,7 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
+	c.JSON(http.StatusOK, dto.MessageResponse{Message: "User deleted successfully"})
 }
 
 // GetCurrentUser returns the authenticated user's profile.
@@ -178,9 +178,9 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 // @Tags users
 // @Produce json
 // @Security CookieAuth
-// @Success 200 {object} UserResponseEnvelope
-// @Failure 401 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
+// @Success 200 {object} dto.UserResponseEnvelope
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Router /api/user/me [get]
 func (h *Handler) GetCurrentUser(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
@@ -195,8 +195,8 @@ func (h *Handler) GetCurrentUser(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Current user retrieved successfully",
-		"user":    dto.UserResponseFromDomain(data),
+	c.JSON(http.StatusOK, dto.UserResponseEnvelope{
+		Message: "Current user retrieved successfully",
+		User:    dto.UserResponseFromDomain(data),
 	})
 }

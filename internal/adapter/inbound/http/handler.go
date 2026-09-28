@@ -5,7 +5,8 @@ import (
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 	"github.com/Jonathan0823/auth-go/internal/core/port"
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/core/ratelimit"
+	"github.com/Jonathan0823/auth-go/internal/observability"
 )
 
 // OAuthFlow owns the HTTP-specific provider handshake outside the core service.
@@ -25,8 +26,8 @@ type Handler struct {
 	OAuth        OAuthFlow
 	CookieDomain string
 	SecureCookie bool
-	Audit        *platform.AuditLogger
-	RateLimiter  *platform.RateLimiter
+	Audit        *observability.AuditLogger
+	RateLimiter  *ratelimit.RateLimiter
 }
 
 func NewHandler(svc port.Service, tokens port.TokenService, oauth OAuthFlow, cfg HandlerConfig) *Handler {

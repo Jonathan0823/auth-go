@@ -48,13 +48,13 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string, includePa
 			return nil, err
 		}
 		return &domain.User{
-			ID:         int(row.ID),
-			Username:   row.Username,
-			Email:      row.Email,
-			Password:   row.Password,
-			IsVerified: row.IsVerified.Bool,
-			UpdatedAt:  row.UpdatedAt.Time,
-			CreatedAt:  row.CreatedAt.Time,
+			ID:           int(row.ID),
+			Username:     row.Username,
+			Email:        row.Email,
+			PasswordHash: row.Password,
+			IsVerified:   row.IsVerified.Bool,
+			UpdatedAt:    row.UpdatedAt.Time,
+			CreatedAt:    row.CreatedAt.Time,
 		}, nil
 	}
 	row, err := r.q.GetUserByEmailWithoutPassword(ctx, email)
@@ -78,7 +78,7 @@ func (r *userRepository) Create(ctx context.Context, user domain.User) error {
 	_, err := r.q.CreateUser(ctx, CreateUserParams{
 		Username: user.Username,
 		Email:    user.Email,
-		Password: user.Password,
+		Password: user.PasswordHash,
 	})
 	if err != nil {
 		if pgUniqueViolation(err) {

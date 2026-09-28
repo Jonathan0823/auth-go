@@ -3,7 +3,12 @@ package http
 import (
 	"log/slog"
 
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/Jonathan0823/auth-go/docs"
 	inhttp "github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/middleware"
+	"github.com/Jonathan0823/auth-go/internal/observability"
 	"github.com/gin-gonic/gin"
 )
 
@@ -50,4 +55,16 @@ func RegisterHealthRoutes(r *gin.Engine, db DBPinger) {
 	health := NewHealthHandler(db)
 	r.GET("/health/live", health.Live)
 	r.GET("/health/ready", health.Ready)
+}
+
+func RegisterMetricsRoute(r *gin.Engine, metrics *observability.Metrics, enabled bool) {
+	if enabled && metrics != nil {
+		r.GET("/metrics", gin.WrapH(metrics.Handler()))
+	}
+}
+
+func RegisterSwaggerRoutes(r *gin.Engine, enabled bool, environment string) {
+	if enabled && environment != "production" {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 }

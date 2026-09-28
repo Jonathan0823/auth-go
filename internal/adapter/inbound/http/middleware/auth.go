@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/gin-gonic/gin"
 
@@ -34,27 +33,5 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 		}
 		c.Set("user", claims)
 		c.Next()
-	}
-}
-
-func ErrorHandler(logger *slog.Logger) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Next()
-		if len(c.Errors) == 0 {
-			return
-		}
-
-		err := c.Errors.Last().Err
-		status, message := mapError(err)
-		if statusIsServerError(status) {
-			logger.ErrorContext(c.Request.Context(), "application error",
-				slog.String("request_id", RequestIDFromContext(c.Request.Context())),
-				slog.Int("status", status),
-				slog.String("error", message),
-				slog.String("error_type", fmt.Sprintf("%T", err)),
-			)
-		}
-		c.JSON(status, gin.H{"error": message})
-		c.Abort()
 	}
 }

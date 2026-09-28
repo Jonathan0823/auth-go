@@ -8,7 +8,7 @@ import (
 
 	"github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/dto"
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/observability"
 )
 
 // OAuthLogin starts the OAuth authorization flow for a supported provider.
@@ -17,7 +17,7 @@ import (
 // @Tags oauth
 // @Param provider path string true "OAuth provider" Enums(github,google)
 // @Success 302
-// @Failure 400 {object} ErrorResponse
+// @Failure 400 {object} dto.ErrorResponse
 // @Router /api/oauth/{provider}/ [get]
 func (h *Handler) OAuthLogin(c *gin.Context) {
 	if !h.allowRateLimit(c, ipRateLimit("oauth_ip", c)) {
@@ -36,9 +36,9 @@ func (h *Handler) OAuthLogin(c *gin.Context) {
 // @Tags oauth
 // @Produce json
 // @Param provider path string true "OAuth provider" Enums(github,google)
-// @Success 200 {object} UserResponseEnvelope
-// @Failure 401 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Success 200 {object} dto.UserResponseEnvelope
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /api/oauth/{provider}/callback [get]
 func (h *Handler) OAuthCallback(c *gin.Context) {
 	ctx, cancel := CtxWithTimeout(c)
@@ -53,21 +53,21 @@ func (h *Handler) OAuthCallback(c *gin.Context) {
 	profile, err := h.OAuth.CompleteAuth(c.Writer, c.Request, c.Param("provider"))
 	if err != nil {
 		authErr := fmt.Errorf("oauth authentication failed: %w", domain.ErrUnauthenticated)
-		h.auditFailure(c, platform.EventAuthOAuth, c.Param("provider"), authErr, 0)
+		h.auditFailure(c, observability.EventAuthOAuth, c.Param("provider"), authErr, 0)
 		_ = c.Error(authErr)
 		return
 	}
 	userData, err := h.Svc.OAuth.Login(ctx, profile)
 	if err != nil {
 		authErr := fmt.Errorf("oauth authentication failed: %w", domain.ErrUnauthenticated)
-		h.auditFailure(c, platform.EventAuthOAuth, c.Param("provider"), authErr, 0)
+		h.auditFailure(c, observability.EventAuthOAuth, c.Param("provider"), authErr, 0)
 		_ = c.Error(authErr)
 		return
 	}
 
-	h.auditSuccess(c, platform.EventAuthOAuth, c.Param("provider"), userData.ID)
-	c.JSON(http.StatusOK, gin.H{
-		"message": "User logged in successfully",
-		"user":    dto.UserResponseFromDomain(userData),
+	h.auditSuccess(c, observability.EventAuthOAuth, c.Param("provider"), userData.ID)
+	c.JSON(http.StatusOK, dto.UserResponseEnvelope{
+		Message: "User logged in successfully",
+		User:    dto.UserResponseFromDomain(userData),
 	})
 }

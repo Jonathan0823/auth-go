@@ -47,19 +47,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -94,7 +94,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         },
                         "headers": {
                             "Set-Cookie": {
@@ -106,19 +106,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -143,7 +143,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         },
                         "headers": {
                             "Set-Cookie": {
@@ -155,13 +155,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -187,7 +187,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         },
                         "headers": {
                             "Set-Cookie": {
@@ -199,13 +199,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -240,25 +240,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -292,19 +292,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -333,19 +333,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -374,19 +374,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -419,7 +419,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -452,19 +452,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.UserResponseEnvelope"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -498,31 +498,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -556,25 +556,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.UserResponseEnvelope"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -599,19 +599,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.UsersResponseEnvelope"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UsersResponseEnvelope"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -636,19 +636,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.UserResponseEnvelope"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -687,25 +687,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.MessageResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -739,25 +739,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.UserResponseEnvelope"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.ErrorResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -778,7 +778,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.HealthResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.HealthResponse"
                         }
                     }
                 }
@@ -799,13 +799,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.HealthResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.HealthResponse"
                         }
                     },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_inbound_http.HealthResponse"
+                            "$ref": "#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.HealthResponse"
                         }
                     }
                 }
@@ -830,6 +830,15 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "invalid input"
+                }
+            }
+        },
         "github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ForgotPasswordRequest": {
             "type": "object",
             "required": [
@@ -838,6 +847,24 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                }
+            }
+        },
+        "github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Operation completed successfully"
                 }
             }
         },
@@ -913,34 +940,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_adapter_inbound_http.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "invalid input"
-                }
-            }
-        },
-        "internal_adapter_inbound_http.HealthResponse": {
-            "type": "object",
-            "properties": {
-                "status": {
-                    "type": "string",
-                    "example": "ok"
-                }
-            }
-        },
-        "internal_adapter_inbound_http.MessageResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Operation completed successfully"
-                }
-            }
-        },
-        "internal_adapter_inbound_http.UserResponseEnvelope": {
+        "github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope": {
             "type": "object",
             "properties": {
                 "message": {
@@ -952,7 +952,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_adapter_inbound_http.UsersResponseEnvelope": {
+        "github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UsersResponseEnvelope": {
             "type": "object",
             "properties": {
                 "message": {

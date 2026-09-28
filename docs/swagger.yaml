@@ -12,12 +12,30 @@ definitions:
     - email
     - password
     type: object
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse:
+    properties:
+      error:
+        example: invalid input
+        type: string
+    type: object
   github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ForgotPasswordRequest:
     properties:
       email:
         type: string
     required:
     - email
+    type: object
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.HealthResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse:
+    properties:
+      message:
+        example: Operation completed successfully
+        type: string
     type: object
   github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ResetPasswordRequest:
     properties:
@@ -68,25 +86,7 @@ definitions:
       username:
         type: string
     type: object
-  internal_adapter_inbound_http.ErrorResponse:
-    properties:
-      error:
-        example: invalid input
-        type: string
-    type: object
-  internal_adapter_inbound_http.HealthResponse:
-    properties:
-      status:
-        example: ok
-        type: string
-    type: object
-  internal_adapter_inbound_http.MessageResponse:
-    properties:
-      message:
-        example: Operation completed successfully
-        type: string
-    type: object
-  internal_adapter_inbound_http.UserResponseEnvelope:
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope:
     properties:
       message:
         example: User retrieved successfully
@@ -94,7 +94,7 @@ definitions:
       user:
         $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponse'
     type: object
-  internal_adapter_inbound_http.UsersResponseEnvelope:
+  github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UsersResponseEnvelope:
     properties:
       message:
         example: Users retrieved successfully
@@ -133,15 +133,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       summary: Request password reset
       tags:
       - authentication
@@ -169,19 +169,19 @@ paths:
               description: refresh_token=<opaque-token>; HttpOnly; SameSite=Lax
               type: string
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       summary: Log in
       tags:
       - authentication
@@ -198,15 +198,15 @@ paths:
               description: refresh_token=; Max-Age=0
               type: string
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Log out
@@ -227,15 +227,15 @@ paths:
               description: refresh_token=<opaque-token>; HttpOnly; SameSite=Lax
               type: string
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Refresh tokens
@@ -260,19 +260,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       summary: Register a user
       tags:
       - authentication
@@ -294,15 +294,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       summary: Reset password
       tags:
       - authentication
@@ -321,15 +321,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       summary: Verify email
       tags:
       - authentication
@@ -348,15 +348,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       summary: Resend email verification
       tags:
       - authentication
@@ -378,7 +378,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       summary: Start OAuth login
       tags:
       - oauth
@@ -400,15 +400,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.UserResponseEnvelope'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       summary: Complete OAuth login
       tags:
       - oauth
@@ -427,19 +427,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.UserResponseEnvelope'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get user by ID
@@ -460,23 +460,23 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Delete user
@@ -497,19 +497,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.UserResponseEnvelope'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get user by email
@@ -524,15 +524,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.UsersResponseEnvelope'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UsersResponseEnvelope'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: List users
@@ -547,15 +547,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.UserResponseEnvelope'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.UserResponseEnvelope'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get current user
@@ -579,19 +579,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.MessageResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.ErrorResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Update current user
@@ -607,7 +607,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.HealthResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.HealthResponse'
       summary: Check process liveness
       tags:
       - operations
@@ -621,11 +621,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.HealthResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.HealthResponse'
         "503":
           description: Service Unavailable
           schema:
-            $ref: '#/definitions/internal_adapter_inbound_http.HealthResponse'
+            $ref: '#/definitions/github_com_Jonathan0823_auth-go_internal_adapter_inbound_http_dto.HealthResponse'
       summary: Check service readiness
       tags:
       - operations
