@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,9 +22,17 @@ func TestUserResponseMappings(t *testing.T) {
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}
+	user.PasswordHash = "must-not-be-exposed"
 	response := UserResponseFromDomain(user)
 	if response.ID != user.ID || response.Email != user.Email || response.Provider != user.Provider || !response.IsVerified {
 		t.Fatalf("response = %#v", response)
+	}
+	encoded, err := json.Marshal(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "must-not-be-exposed") || strings.Contains(string(encoded), "password") {
+		t.Fatalf("user response exposed password data: %s", encoded)
 	}
 	responses := UserResponsesFromDomain([]*domain.User{user})
 	if len(responses) != 1 || responses[0].ID != user.ID {

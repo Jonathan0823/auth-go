@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Jonathan0823/auth-go/internal/core/port"
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/core/ratelimit"
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,7 +27,7 @@ func (fakeRateLimitStore) Close() error                        { return nil }
 
 func TestRateLimitResponse(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := &Handler{RateLimiter: platform.NewRateLimiter(
+	handler := &Handler{RateLimiter: ratelimit.NewRateLimiter(
 		fakeRateLimitStore{decision: port.RateLimitDecision{RetryAfter: 10 * time.Second}},
 		"test-key",
 		map[string]port.RateLimitPolicy{"login_ip": {Name: "login_ip", Limit: 1, Window: time.Minute}},
@@ -99,8 +99,9 @@ func TestRateLimitUsesForwardedIPFromTrustedProxy(t *testing.T) {
 
 func TestRateLimitBackendFailureDoesNotLeakError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := &Handler{RateLimiter: platform.NewRateLimiter(
+	handler := &Handler{RateLimiter: ratelimit.NewRateLimiter(
 		fakeRateLimitStore{err: errors.New("redis password leaked")},
+
 		"test-key",
 		map[string]port.RateLimitPolicy{"login_ip": {Name: "login_ip", Limit: 1, Window: time.Minute}},
 	)}

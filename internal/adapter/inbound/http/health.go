@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/dto"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,10 +29,10 @@ func NewHealthHandler(db DBPinger) *HealthHandler {
 // @Description Returns liveness without checking external dependencies.
 // @Tags operations
 // @Produce json
-// @Success 200 {object} HealthResponse
+// @Success 200 {object} dto.HealthResponse
 // @Router /health/live [get]
 func (h *HealthHandler) Live(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	c.JSON(http.StatusOK, dto.HealthResponse{Status: "ok"})
 }
 
 // Ready godoc
@@ -40,20 +41,20 @@ func (h *HealthHandler) Live(c *gin.Context) {
 // @Description Checks PostgreSQL connectivity with a bounded timeout.
 // @Tags operations
 // @Produce json
-// @Success 200 {object} HealthResponse
-// @Failure 503 {object} HealthResponse
+// @Success 200 {object} dto.HealthResponse
+// @Failure 503 {object} dto.HealthResponse
 // @Router /health/ready [get]
 func (h *HealthHandler) Ready(c *gin.Context) {
 	if h.db == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not_ready"})
+		c.JSON(http.StatusServiceUnavailable, dto.HealthResponse{Status: "not_ready"})
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), readinessTimeout)
 	defer cancel()
 	if err := h.db.Ping(ctx); err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not_ready"})
+		c.JSON(http.StatusServiceUnavailable, dto.HealthResponse{Status: "not_ready"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	c.JSON(http.StatusOK, dto.HealthResponse{Status: "ready"})
 }

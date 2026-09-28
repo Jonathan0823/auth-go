@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/observability"
 )
 
 type requestIDKey struct{}
@@ -47,7 +47,7 @@ func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 			slog.String("path", c.Request.URL.Path),
 			slog.Int("status", c.Writer.Status()),
 			slog.Duration("duration", time.Since(start)),
-			platform.Redact("user_agent", c.GetHeader("User-Agent")),
+			observability.Redact("user_agent", c.GetHeader("User-Agent")),
 		)
 	}
 }

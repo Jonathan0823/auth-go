@@ -12,7 +12,7 @@ import (
 	inhttp "github.com/Jonathan0823/auth-go/internal/adapter/inbound/http/middleware"
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 	"github.com/Jonathan0823/auth-go/internal/core/service"
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/observability"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,12 +20,12 @@ func TestAuditIncludesRequestIDWithoutSensitiveInput(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	var output bytes.Buffer
 	handler := &Handler{
-		Audit: platform.NewAuditLogger(slog.New(slog.NewJSONHandler(&output, nil)), platform.NewMetrics(nil)),
+		Audit: observability.NewAuditLogger(slog.New(slog.NewJSONHandler(&output, nil)), observability.NewMetrics(nil)),
 	}
 	router := gin.New()
 	router.Use(inhttp.RequestID())
 	router.GET("/audit", func(c *gin.Context) {
-		handler.auditSuccess(c, platform.EventAuthLogin, "", 0)
+		handler.auditSuccess(c, observability.EventAuthLogin, "", 0)
 		c.Status(http.StatusNoContent)
 	})
 
@@ -52,10 +52,10 @@ func TestAuditReasonClassifiesErrors(t *testing.T) {
 		err  error
 		want string
 	}{
-		{name: "replay", err: fmtReplayError(), want: platform.ReasonReplayDetected},
-		{name: "validation", err: domain.ErrInvalidInput, want: platform.ReasonValidation},
-		{name: "unauthenticated", err: domain.ErrUnauthenticated, want: platform.ReasonUnauthenticated},
-		{name: "unknown", err: errors.New("internal details"), want: platform.ReasonInternal},
+		{name: "replay", err: fmtReplayError(), want: observability.ReasonReplayDetected},
+		{name: "validation", err: domain.ErrInvalidInput, want: observability.ReasonValidation},
+		{name: "unauthenticated", err: domain.ErrUnauthenticated, want: observability.ReasonUnauthenticated},
+		{name: "unknown", err: errors.New("internal details"), want: observability.ReasonInternal},
 	}
 
 	for _, tt := range tests {

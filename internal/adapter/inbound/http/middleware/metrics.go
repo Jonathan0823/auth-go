@@ -4,11 +4,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/observability"
 	"github.com/gin-gonic/gin"
 )
 
-func Metrics(metrics *platform.Metrics) gin.HandlerFunc {
+func Metrics(metrics *observability.Metrics) gin.HandlerFunc {
 	if metrics == nil {
 		return func(c *gin.Context) { c.Next() }
 	}

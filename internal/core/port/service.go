@@ -6,9 +6,21 @@ import (
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 )
 
+type RegisterCommand struct {
+	Email    string
+	Password string
+}
+
+type LoginCommand struct {
+	Email     string
+	Password  string
+	IPAddress string
+	UserAgent string
+}
+
 type AuthService interface {
-	Register(ctx context.Context, user domain.User) error
-	Login(ctx context.Context, user domain.User) (accessToken, refreshToken string, err error)
+	Register(ctx context.Context, command RegisterCommand) error
+	Login(ctx context.Context, command LoginCommand) (accessToken, refreshToken string, err error)
 	ForgotPassword(ctx context.Context, email string) error
 	CreateVerifyEmail(ctx context.Context, email string) error
 	VerifyEmail(ctx context.Context, id string) error

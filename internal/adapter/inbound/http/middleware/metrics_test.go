@@ -7,12 +7,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/observability"
 )
 
 func TestMetricsMiddlewareRecordsMatchedAndUnmatchedRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	metrics := platform.NewMetrics(nil)
+	metrics := observability.NewMetrics(nil)
 	router := gin.New()
 	router.Use(Metrics(metrics))
 	router.GET("/health", func(c *gin.Context) { c.Status(http.StatusNoContent) })

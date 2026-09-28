@@ -33,11 +33,11 @@ type handlerAuthService struct {
 	forgotCalls     int
 }
 
-func (f *handlerAuthService) Register(context.Context, domain.User) error {
+func (f *handlerAuthService) Register(context.Context, port.RegisterCommand) error {
 	f.registerCalls++
 	return f.registerErr
 }
-func (f *handlerAuthService) Login(context.Context, domain.User) (string, string, error) {
+func (f *handlerAuthService) Login(context.Context, port.LoginCommand) (string, string, error) {
 	f.loginCalls++
 	return "access", "refresh", f.loginErr
 }
