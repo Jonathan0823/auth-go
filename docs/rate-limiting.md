@@ -4,6 +4,24 @@ The HTTP adapter checks IP policies before calling auth services. Auth services 
 
 Counters use a **fixed window starting with the first request**. The next window starts on the first request after expiry. Keys are HMAC-SHA-256 digests of the policy, dimension, and identifier using `RATE_LIMIT_KEY`; raw emails, tokens, and IP addresses are not stored as rate-limit keys. Email keys are trimmed and lowercased.
 
+```mermaid
+flowchart TD
+    Request[Auth HTTP request] --> IP[HTTP adapter checks client IP policy]
+    IP -->|denied| Limited[429 with Retry-After]
+    IP -->|backend error| Unavailable[503 fail closed]
+    IP -->|allowed| Service[Auth application service]
+    Service -->|account, email or token policy applies| Subject[Check subject policy]
+    Service -->|no subject policy| UseCase[Run auth use case]
+    Subject -->|denied| Limited
+    Subject -->|backend error| Unavailable
+    Subject -->|allowed| UseCase
+    UseCase -->|successful password login| Reset[Reset login account counter]
+    Reset --> Result[Return response]
+    UseCase -->|other result| Result
+```
+
+Both checks use HMAC-derived keys and the same configured rate-limit store. A non-HTTP caller enters at the application service, so it still receives subject-policy checks but has no HTTP client-IP check.
+
 ## Default policies
 
 Override a policy with `RATE_LIMIT_<NAME>=<limit>/<Go duration>` (for example, `RATE_LIMIT_LOGIN_IP=30/1m`). These defaults are defined in `internal/config/rate_limit.go`:

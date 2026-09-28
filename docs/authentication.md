@@ -8,6 +8,33 @@
 4. Refresh rotates the one-time token. Reusing an already-used token revokes its entire token family. Logout revokes the family and clears the cookies.
 5. Password recovery and verification tokens are stored in PostgreSQL; [rate limits](rate-limiting.md) protect these workflows.
 
+```mermaid
+sequenceDiagram
+    participant Client
+    participant HTTP as HTTP adapter
+    participant Auth as Auth service
+    participant Tokens as JWT/token adapter
+    participant DB as PostgreSQL
+    Client->>HTTP: Login with credentials
+    HTTP->>Auth: Login
+    Auth->>DB: Load user and password hash
+    Auth->>Tokens: Sign access JWT; generate opaque refresh token and HMAC
+    Auth->>DB: Store refresh-token HMAC and family ID
+    Auth-->>HTTP: Access and refresh tokens
+    HTTP-->>Client: Set HttpOnly cookies
+    Client->>HTTP: Refresh with refresh cookie
+    HTTP->>Auth: RefreshTokens
+    Auth->>Tokens: HMAC the presented token
+    Auth->>Tokens: Sign new JWT; generate replacement refresh token and HMAC
+    Auth->>DB: Consume old token and create replacement in a transaction
+    Auth-->>HTTP: New access and refresh tokens
+    HTTP-->>Client: Replace cookies
+    Client->>HTTP: Reuse old refresh token
+    HTTP->>Auth: RefreshTokens
+    Auth->>DB: Revoke token family in a transaction
+    HTTP-->>Client: 401 unauthorized
+```
+
 Existing JWT refresh sessions are invalidated by the security migration. Legacy bcrypt password hashes are not accepted; affected users must reset their password.
 
 ## Routes
