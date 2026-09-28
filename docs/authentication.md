@@ -18,14 +18,14 @@ sequenceDiagram
     Client->>HTTP: Login with credentials
     HTTP->>Auth: Login
     Auth->>DB: Load user and password hash
-    Auth->>Tokens: Sign access JWT; generate opaque refresh token and HMAC
+    Auth->>Tokens: Sign access JWT and generate opaque refresh token plus HMAC
     Auth->>DB: Store refresh-token HMAC and family ID
     Auth-->>HTTP: Access and refresh tokens
     HTTP-->>Client: Set HttpOnly cookies
     Client->>HTTP: Refresh with refresh cookie
     HTTP->>Auth: RefreshTokens
     Auth->>Tokens: HMAC the presented token
-    Auth->>Tokens: Sign new JWT; generate replacement refresh token and HMAC
+    Auth->>Tokens: Sign new JWT and generate replacement refresh token plus HMAC
     Auth->>DB: Consume old token and create replacement in a transaction
     Auth-->>HTTP: New access and refresh tokens
     HTTP-->>Client: Replace cookies
