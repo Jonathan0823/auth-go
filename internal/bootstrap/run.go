@@ -14,17 +14,19 @@ import (
 	outoauth "github.com/Jonathan0823/auth-go/internal/adapter/outbound/oauth"
 	outpassword "github.com/Jonathan0823/auth-go/internal/adapter/outbound/password"
 	outpostgres "github.com/Jonathan0823/auth-go/internal/adapter/outbound/postgres"
+	"github.com/Jonathan0823/auth-go/internal/config"
+	"github.com/Jonathan0823/auth-go/internal/core/ratelimit"
 	"github.com/Jonathan0823/auth-go/internal/core/service"
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/observability"
 )
 
-func Run(ctx context.Context, cfg platform.Config) error {
+func Run(ctx context.Context, cfg config.Config) error {
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("validate configuration: %w", err)
 	}
 
 	startupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	pool, err := platform.NewPool(startupCtx, cfg.DatabaseURL)
+	pool, err := outpostgres.NewPool(startupCtx, cfg.DatabaseURL)
 	cancel()
 	if err != nil {
 		return err
@@ -35,7 +37,6 @@ func Run(ctx context.Context, cfg platform.Config) error {
 	tokens := outjwt.NewTokenService(cfg.JWTAccessSecret, cfg.RefreshTokenHashKey)
 	email := outemail.NewSender(cfg.EmailAddress, cfg.EmailPassword)
 	hasher := outpassword.NewHasher()
-	svc := service.New(repo, tokens, email, hasher, cfg.BaseURL)
 	oauth := outoauth.New(outoauth.Config{
 		BaseURL:            cfg.BaseURL,
 		SessionSecret:      cfg.SessionSecret,
@@ -50,9 +51,9 @@ func Run(ctx context.Context, cfg platform.Config) error {
 	if err := r.SetTrustedProxies(cfg.RateLimit.TrustedProxies); err != nil {
 		return fmt.Errorf("configure trusted proxies: %w", err)
 	}
-	logger := platform.NewLogger(cfg.LogLevel)
-	metrics := platform.NewMetrics(pool)
-	audit := platform.NewAuditLogger(logger, metrics)
+	logger := observability.NewLogger(cfg.LogLevel)
+	metrics := observability.NewMetrics(pool)
+	audit := observability.NewAuditLogger(logger, metrics)
 	rateLimitStore, redisClient, err := newRateLimitStore(cfg.RateLimit, pool)
 	if err != nil {
 		return fmt.Errorf("create rate-limit backend: %w", err)
@@ -61,8 +62,10 @@ func Run(ctx context.Context, cfg platform.Config) error {
 	if redisClient != nil {
 		defer func() { _ = redisClient.Close() }()
 	}
+	rateLimiter := ratelimit.NewRateLimiter(rateLimitStore, cfg.RateLimit.Key, cfg.RateLimit.Policies)
+	svc := service.New(repo, tokens, email, hasher, cfg.BaseURL, rateLimiter)
 
-	r.Use(platform.CORS(cfg))
+	r.Use(inhttp.CORS(cfg))
 	r.Use(inhttpmw.RequestID())
 	if cfg.EnableMetrics {
 		r.Use(inhttpmw.Metrics(metrics))
@@ -74,11 +77,11 @@ func Run(ctx context.Context, cfg platform.Config) error {
 		SecureCookie: cfg.Environment == "production",
 	})
 	handler.Audit = audit
-	handler.RateLimiter = platform.NewRateLimiter(rateLimitStore, cfg.RateLimit.Key, cfg.RateLimit.Policies)
+	handler.RateLimiter = rateLimiter
 	inhttp.RegisterRoutes(r, handler, logger)
 	inhttp.RegisterSwaggerRoutes(r, cfg.EnableSwagger, cfg.Environment)
 	inhttp.RegisterHealthRoutes(r, pool)
 	inhttp.RegisterMetricsRoute(r, metrics, cfg.EnableMetrics)
 
-	return platform.RunServer(ctx, r, cfg)
+	return inhttp.RunServer(ctx, r, cfg)
 }

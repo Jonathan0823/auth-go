@@ -1,4 +1,4 @@
-package platform
+package observability
 
 import (
 	"bytes"

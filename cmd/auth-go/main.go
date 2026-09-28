@@ -23,7 +23,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/Jonathan0823/auth-go/internal/bootstrap"
-	"github.com/Jonathan0823/auth-go/internal/platform"
+	"github.com/Jonathan0823/auth-go/internal/config"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if err := bootstrap.Run(ctx, platform.LoadConfig()); err != nil {
+	if err := bootstrap.Run(ctx, config.LoadConfig()); err != nil {
 		log.Fatal(err)
 	}
 }

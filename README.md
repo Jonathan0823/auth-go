@@ -70,7 +70,7 @@ GOOGLE_CLIENT_SECRET=
 
 Configuration is validated before the database or HTTP server starts. In production, JWT, refresh-token, session, and rate-limit secrets must each be at least 32 bytes.
 
-Authentication rate limiting supports `memory`, `redis`, and `postgres` backends. Memory is intended for development or an explicitly approved single-instance deployment; production should use Redis or PostgreSQL. Set `RATE_LIMIT_KEY` to a separate secret and configure `TRUSTED_PROXIES` only for known proxy networks.
+Authentication rate limiting supports `memory`, `redis`, and `postgres` backends. Account/email/token policies are enforced by auth application services; HTTP IP limits and request/response handling stay in the HTTP adapter. Memory is intended for development or an explicitly approved single-instance deployment; production should use Redis or PostgreSQL. Set `RATE_LIMIT_KEY` to a separate secret and configure `TRUSTED_PROXIES` only for known proxy networks.
 
 `make` loads `.env` automatically. Use another file explicitly when needed:
 
@@ -161,14 +161,26 @@ Supported providers: GitHub and Google.
 ## Project structure
 
 ```text
-cmd/       application entrypoint
-docs/      generated Swagger specification and registration
+cmd/             application entrypoint
 internal/
-  core/    domain models, ports, and services
-  adapter/ HTTP, PostgreSQL, JWT, password, OAuth, and email adapters
-  platform/ configuration, database, logging, and server setup
-migrations/ PostgreSQL schema migrations
+  bootstrap/      dependency construction and resource lifecycle
+  config/         environment loading and validation
+  core/
+    domain/       business models and errors
+    port/         application-owned contracts and inputs
+    ratelimit/    transport-independent rate-limit coordination
+    service/      authentication and user use cases
+  adapter/
+    inbound/http/ Gin handlers, routing, DTOs, and HTTP middleware
+    outbound/     PostgreSQL, rate-limit stores, JWT, OAuth, password, and email
+  observability/  logging, metrics, and audit implementations
+docs/             generated Swagger specification and registration
+migrations/       PostgreSQL schema migrations
 ```
+
+Dependencies point inward: core code does not import HTTP, configuration, observability, or infrastructure adapters. `bootstrap` is the composition root that wires the ports to concrete adapters. Future queue publishers belong among outbound adapters; workers belong among inbound adapters. Add them when there is a concrete queued workflow.
+
+Go source and test filenames under `cmd/` and `internal/` use lowercase descriptive names with underscores between words. Test files append `_test.go`; tagged integration tests use `_integration_test.go`. Generated files keep generator-controlled names and must remain reproducible.
 
 ## License
 

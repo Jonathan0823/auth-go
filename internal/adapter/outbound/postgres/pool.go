@@ -1,4 +1,4 @@
-package platform
+package postgres
 
 import (
 	"context"
