@@ -26,7 +26,14 @@ make run
 
 The API listens at `http://localhost:8080` by default. Swagger UI is available at `/swagger/index.html` when `ENABLE_SWAGGER=true` outside production.
 
-**[Read the documentation](docs/README.md)** for configuration, authentication, architecture, rate limiting, storage/caching, and tests.
+## Documentation
+
+- [Setup and operations](docs/setup.md) — configuration, migrations, testing, and observability.
+- [Authentication and API](docs/authentication.md) — tokens, cookies, and routes.
+- [Rate limiting](docs/rate-limiting.md) — policies, backends, and failure handling.
+- [Storage and caching](docs/storage-and-caching.md) — PostgreSQL, Redis, and what is not cached.
+- [Architecture](docs/architecture.md) — package boundaries and extension points.
+- [Swagger specification](docs/swagger.yaml) — generated HTTP API contract.
 
 ## License
 
