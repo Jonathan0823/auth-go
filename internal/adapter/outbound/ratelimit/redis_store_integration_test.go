@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Jonathan0823/auth-go/internal/core/port"
-	"github.com/Jonathan0823/auth-go/internal/platform"
 )
 
 func newIntegrationRedisStore(t *testing.T) *RedisStore {
@@ -28,7 +27,7 @@ func newIntegrationRedisStore(t *testing.T) *RedisStore {
 			t.Fatal(err)
 		}
 	}
-	client := platform.NewRedisClient(redisAddr, os.Getenv("REDIS_PASSWORD"), database)
+	client := NewRedisClient(redisAddr, os.Getenv("REDIS_PASSWORD"), database)
 	if err := client.Ping(context.Background()).Err(); err != nil {
 		_ = client.Close()
 		t.Fatal(err)

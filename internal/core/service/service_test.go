@@ -10,6 +10,7 @@ import (
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 	"github.com/Jonathan0823/auth-go/internal/core/port"
+	"github.com/Jonathan0823/auth-go/internal/core/ratelimit"
 )
 
 var errFake = errors.New("fake failure")
@@ -256,6 +257,47 @@ func newAuthFakes() (*fakeRepository, *fakeUserRepository, *fakeAuthRepository, 
 	return repo, users, auth, &fakeEmailSender{}
 }
 
+type testRateLimitStore struct {
+	decision   port.RateLimitDecision
+	allowErr   error
+	resetErr   error
+	policies   []string
+	resetCalls int
+}
+
+func (s *testRateLimitStore) Allow(_ context.Context, _ string, policy port.RateLimitPolicy) (port.RateLimitDecision, error) {
+	s.policies = append(s.policies, policy.Name)
+	if s.allowErr != nil {
+		return port.RateLimitDecision{}, s.allowErr
+	}
+	if s.decision.Allowed || s.decision.RetryAfter > 0 {
+		return s.decision, nil
+	}
+	return port.RateLimitDecision{Allowed: true}, nil
+}
+func (s *testRateLimitStore) Reset(context.Context, string) error {
+	s.resetCalls++
+	return s.resetErr
+}
+func (*testRateLimitStore) Backend() string { return "test" }
+func (*testRateLimitStore) Close() error    { return nil }
+
+func testRateLimiterWithStore(store port.RateLimitStore) *ratelimit.RateLimiter {
+	policies := make(map[string]port.RateLimitPolicy)
+	for _, name := range []string{"register_email", "login_account", "verify_email", "recovery_email", "recovery_token"} {
+		policies[name] = port.RateLimitPolicy{Name: name, Limit: 5, Window: time.Minute}
+	}
+	return ratelimit.NewRateLimiter(store, "test-key", policies)
+}
+
+func testRateLimiter() *ratelimit.RateLimiter {
+	return testRateLimiterWithStore(&testRateLimitStore{decision: port.RateLimitDecision{Allowed: true}})
+}
+
+func newTestAuthService(repo port.Repository, tokens port.TokenService, email port.EmailSender, hasher port.PasswordHasher, baseURL string) *authService {
+	return NewAuthService(repo, tokens, email, hasher, baseURL, testRateLimiter())
+}
+
 func TestUserService(t *testing.T) {
 	user := &domain.User{ID: 7, Email: "user@example.com"}
 	t.Run("gets users", func(t *testing.T) {
@@ -403,8 +445,105 @@ func TestOAuthService(t *testing.T) {
 	}
 }
 
+func TestAuthServiceAppliesEachAccountPolicy(t *testing.T) {
+	cases := []struct {
+		name   string
+		policy string
+		call   func(*authService) error
+	}{
+		{"registration email", "register_email", func(s *authService) error {
+			return s.Register(context.Background(), port.RegisterCommand{Email: "user@example.com", Password: "secret"})
+		}},
+		{"login account", "login_account", func(s *authService) error {
+			_, _, err := s.Login(context.Background(), port.LoginCommand{Email: "user@example.com", Password: "secret"})
+			return err
+		}},
+		{"verification email", "verify_email", func(s *authService) error {
+			return s.CreateVerifyEmail(context.Background(), "user@example.com")
+		}},
+		{"recovery email", "recovery_email", func(s *authService) error {
+			return s.ForgotPassword(context.Background(), "user@example.com")
+		}},
+		{"recovery token", "recovery_token", func(s *authService) error {
+			return s.ResetPassword(context.Background(), uuid.NewString(), "secret")
+		}},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			store := &testRateLimitStore{decision: port.RateLimitDecision{RetryAfter: time.Minute}}
+			repo, _, _, email := newAuthFakes()
+			svc := NewAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost", testRateLimiterWithStore(store))
+			err := tt.call(svc)
+			var limitErr *RateLimitError
+			if !errors.As(err, &limitErr) || limitErr.Unavailable || limitErr.Policy != tt.policy {
+				t.Fatalf("error = %#v, want denied %s policy", err, tt.policy)
+			}
+			if len(store.policies) != 1 || store.policies[0] != tt.policy || repo.withTxCalls != 0 {
+				t.Fatalf("checked policies=%v transactions=%d, want only %s before repository work", store.policies, repo.withTxCalls, tt.policy)
+			}
+		})
+	}
+}
+
+func TestAuthServiceRateLimitsAtApplicationBoundary(t *testing.T) {
+	t.Run("registration is rejected before hashing or persistence", func(t *testing.T) {
+		store := &testRateLimitStore{decision: port.RateLimitDecision{RetryAfter: 12 * time.Second}}
+		repo, _, _, email := newAuthFakes()
+		svc := NewAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost", testRateLimiterWithStore(store))
+
+		err := svc.Register(context.Background(), port.RegisterCommand{Email: "user@example.com", Password: "secret"})
+		var limitErr *RateLimitError
+		if !errors.As(err, &limitErr) || limitErr.Unavailable || limitErr.Policy != "register_email" || limitErr.RetryAfter != 12*time.Second {
+			t.Fatalf("Register error = %#v, want register_email rate-limit error", err)
+		}
+		if repo.withTxCalls != 0 {
+			t.Fatal("rate-limited registration reached persistence")
+		}
+		if len(store.policies) != 1 || store.policies[0] != "register_email" {
+			t.Fatalf("checked policies = %v, want [register_email]", store.policies)
+		}
+	})
+
+	t.Run("successful login resets its account counter", func(t *testing.T) {
+		store := &testRateLimitStore{decision: port.RateLimitDecision{Allowed: true}}
+		repo, users, _, email := newAuthFakes()
+		users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) {
+			return &domain.User{ID: 9, Email: "user@example.com", PasswordHash: "hashed"}, nil
+		}
+		svc := NewAuthService(repo, &fakeTokens{accessToken: "access", refreshToken: "refresh", refreshHash: []byte("hash")}, email, fakeHasher{}, "http://localhost", testRateLimiterWithStore(store))
+
+		if _, _, err := svc.Login(context.Background(), port.LoginCommand{Email: " USER@example.com ", Password: "secret"}); err != nil {
+			t.Fatalf("Login = %v", err)
+		}
+		if len(store.policies) != 1 || store.policies[0] != "login_account" || store.resetCalls != 1 {
+			t.Fatalf("policies=%v reset calls=%d, want login_account and one reset", store.policies, store.resetCalls)
+		}
+	})
+
+	t.Run("backend failure denies login before account lookup", func(t *testing.T) {
+		store := &testRateLimitStore{allowErr: errors.New("redis unavailable")}
+		repo, users, _, email := newAuthFakes()
+		lookupCalls := 0
+		users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) {
+			lookupCalls++
+			return nil, nil
+		}
+		svc := NewAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost", testRateLimiterWithStore(store))
+
+		_, _, err := svc.Login(context.Background(), port.LoginCommand{Email: "user@example.com", Password: "secret"})
+		var limitErr *RateLimitError
+		if !errors.As(err, &limitErr) || !limitErr.Unavailable || !errors.Is(err, port.ErrRateLimitBackendUnavailable) {
+			t.Fatalf("Login error = %v, want backend-unavailable rate-limit error", err)
+		}
+		if lookupCalls != 0 {
+			t.Fatalf("account lookup calls = %d, want 0", lookupCalls)
+		}
+	})
+}
+
 func TestAuthServiceRegisterAndEmailFlows(t *testing.T) {
-	user := domain.User{ID: 3, Email: "user@example.com", Password: "secret"}
+	userID := 3
+	user := port.RegisterCommand{Email: "user@example.com", Password: "secret"}
 	t.Run("register success and failures", func(t *testing.T) {
 		tests := []struct {
 			name  string
@@ -431,14 +570,14 @@ func TestAuthServiceRegisterAndEmailFlows(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				repo, users, auth, email := newAuthFakes()
 				users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) {
-					return &domain.User{ID: user.ID, Email: user.Email}, nil
+					return &domain.User{ID: userID, Email: user.Email}, nil
 				}
 				hasher := fakeHasher{}
 				if tt.name == "hash" {
 					hasher.hashFn = func(string) (string, error) { return "", errFake }
 				}
 				tt.setup(repo, users, auth, email)
-				svc := NewAuthService(repo, fakeTokens{}, email, hasher, "http://localhost")
+				svc := newTestAuthService(repo, fakeTokens{}, email, hasher, "http://localhost")
 				if err := svc.Register(context.Background(), user); err == nil {
 					t.Fatal("Register succeeded unexpectedly")
 				}
@@ -447,9 +586,9 @@ func TestAuthServiceRegisterAndEmailFlows(t *testing.T) {
 
 		repo, users, _, email := newAuthFakes()
 		users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) {
-			return &domain.User{ID: user.ID, Email: user.Email}, nil
+			return &domain.User{ID: userID, Email: user.Email}, nil
 		}
-		if err := NewAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost").Register(context.Background(), user); err != nil {
+		if err := newTestAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost").Register(context.Background(), user); err != nil {
 			t.Fatalf("Register = %v", err)
 		}
 		if repo.withTxCalls != 1 {
@@ -460,9 +599,9 @@ func TestAuthServiceRegisterAndEmailFlows(t *testing.T) {
 	t.Run("create verification and forgot password", func(t *testing.T) {
 		repo, users, auth, email := newAuthFakes()
 		users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) {
-			return &domain.User{ID: user.ID, Email: user.Email}, nil
+			return &domain.User{ID: userID, Email: user.Email}, nil
 		}
-		svc := NewAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost")
+		svc := newTestAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost")
 		if err := svc.CreateVerifyEmail(context.Background(), user.Email); err != nil {
 			t.Fatalf("CreateVerifyEmail = %v", err)
 		}
@@ -482,7 +621,7 @@ func TestAuthServiceRegisterAndEmailFlows(t *testing.T) {
 }
 
 func TestAuthServiceLogin(t *testing.T) {
-	baseUser := &domain.User{ID: 4, Email: "user@example.com", Password: "hashed"}
+	baseUser := &domain.User{ID: 4, Email: "user@example.com", PasswordHash: "hashed"}
 	tests := []struct {
 		name  string
 		setup func(*fakeRepository, *fakeUserRepository, *fakeAuthRepository, *fakeHasher, *fakeTokens)
@@ -516,7 +655,7 @@ func TestAuthServiceLogin(t *testing.T) {
 			hasher := &fakeHasher{}
 			tokens := &fakeTokens{accessToken: "access", refreshToken: "refresh", refreshHash: []byte("hash")}
 			tt.setup(repo, users, auth, hasher, tokens)
-			_, _, err := NewAuthService(repo, tokens, email, hasher, "http://localhost").Login(context.Background(), domain.User{Email: baseUser.Email, Password: "password"})
+			_, _, err := newTestAuthService(repo, tokens, email, hasher, "http://localhost").Login(context.Background(), port.LoginCommand{Email: baseUser.Email, Password: "password"})
 			if err == nil {
 				t.Fatal("Login succeeded unexpectedly")
 			}
@@ -526,7 +665,7 @@ func TestAuthServiceLogin(t *testing.T) {
 	repo, users, auth, email := newAuthFakes()
 	users.getByEmailFn = func(context.Context, string, bool) (*domain.User, error) { return baseUser, nil }
 	tokens := &fakeTokens{accessToken: "access", refreshToken: "refresh", refreshHash: []byte("hash")}
-	access, refresh, err := NewAuthService(repo, tokens, email, fakeHasher{}, "http://localhost").Login(context.Background(), domain.User{Email: baseUser.Email, Password: "password"})
+	access, refresh, err := newTestAuthService(repo, tokens, email, fakeHasher{}, "http://localhost").Login(context.Background(), port.LoginCommand{Email: baseUser.Email, Password: "password"})
 	if err != nil || access != "access" || refresh != "refresh" {
 		t.Fatalf("Login = %q, %q, %v", access, refresh, err)
 	}
@@ -538,7 +677,7 @@ func TestAuthServiceVerifyAndReset(t *testing.T) {
 	userID := 5
 	t.Run("verify email", func(t *testing.T) {
 		repo, _, auth, email := newAuthFakes()
-		svc := NewAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost")
+		svc := newTestAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost")
 		if err := svc.VerifyEmail(context.Background(), "bad"); !errors.Is(err, domain.ErrInvalidInput) {
 			t.Fatalf("invalid ID error = %v", err)
 		}
@@ -571,12 +710,12 @@ func TestAuthServiceVerifyAndReset(t *testing.T) {
 
 	t.Run("reset password", func(t *testing.T) {
 		repo, users, auth, email := newAuthFakes()
-		svc := NewAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost")
+		svc := newTestAuthService(repo, fakeTokens{}, email, fakeHasher{}, "http://localhost")
 		if err := svc.ResetPassword(context.Background(), "bad", "new"); !errors.Is(err, domain.ErrInvalidInput) {
 			t.Fatalf("invalid ID error = %v", err)
 		}
 		hasher := fakeHasher{hashFn: func(string) (string, error) { return "", errFake }}
-		if err := NewAuthService(repo, fakeTokens{}, email, hasher, "http://localhost").ResetPassword(context.Background(), validID, "new"); !errors.Is(err, errFake) {
+		if err := newTestAuthService(repo, fakeTokens{}, email, hasher, "http://localhost").ResetPassword(context.Background(), validID, "new"); !errors.Is(err, errFake) {
 			t.Fatalf("hash error = %v", err)
 		}
 		auth.getForgotPasswordByIDFn = func(context.Context, string) (domain.ForgotPassword, error) { return domain.ForgotPassword{}, errFake }
@@ -622,7 +761,7 @@ func TestAuthServiceRefreshAndLogout(t *testing.T) {
 		users.getByIDFn = func(context.Context, int) (*domain.User, error) { return user, nil }
 		auth.getRefreshTokenByHashFn = func(context.Context, []byte) (*domain.RefreshToken, error) { return baseToken, nil }
 		tokens := &fakeTokens{accessToken: "access", refreshToken: "new-refresh", refreshHash: []byte("hash")}
-		return NewAuthService(repo, tokens, email, fakeHasher{}, "http://localhost").(*authService), repo, users, auth, tokens
+		return newTestAuthService(repo, tokens, email, fakeHasher{}, "http://localhost"), repo, users, auth, tokens
 	}
 
 	t.Run("refresh success", func(t *testing.T) {

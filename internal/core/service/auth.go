@@ -10,6 +10,7 @@ import (
 
 	"github.com/Jonathan0823/auth-go/internal/core/domain"
 	"github.com/Jonathan0823/auth-go/internal/core/port"
+	"github.com/Jonathan0823/auth-go/internal/core/ratelimit"
 )
 
 var ErrRefreshTokenReused = errors.New("refresh token reused")
@@ -20,29 +21,34 @@ const (
 )
 
 type authService struct {
-	repo    port.Repository
-	tokens  port.TokenService
-	email   port.EmailSender
-	hasher  port.PasswordHasher
-	baseURL string
+	repo        port.Repository
+	tokens      port.TokenService
+	email       port.EmailSender
+	hasher      port.PasswordHasher
+	baseURL     string
+	rateLimiter *ratelimit.RateLimiter
 }
 
-func NewAuthService(repo port.Repository, tokens port.TokenService, email port.EmailSender, hasher port.PasswordHasher, baseURL string) port.AuthService {
+func NewAuthService(repo port.Repository, tokens port.TokenService, email port.EmailSender, hasher port.PasswordHasher, baseURL string, rateLimiter *ratelimit.RateLimiter) *authService {
 	return &authService{
-		repo:    repo,
-		tokens:  tokens,
-		email:   email,
-		hasher:  hasher,
-		baseURL: baseURL,
+		repo:        repo,
+		tokens:      tokens,
+		email:       email,
+		hasher:      hasher,
+		baseURL:     baseURL,
+		rateLimiter: rateLimiter,
 	}
 }
 
-func (s *authService) Register(ctx context.Context, user domain.User) error {
-	hashed, err := s.hasher.Hash(user.Password)
+func (s *authService) Register(ctx context.Context, command port.RegisterCommand) error {
+	if err := s.allowRateLimit(ctx, "register_email", "email", normalizeRateLimitEmail(command.Email)); err != nil {
+		return err
+	}
+	hashed, err := s.hasher.Hash(command.Password)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
-	user.Password = hashed
+	user := domain.User{Email: command.Email, PasswordHash: hashed}
 
 	var verification domain.VerifyEmail
 	if err := s.repo.WithTx(ctx, func(u port.UnitOfWork) error {
@@ -57,8 +63,12 @@ func (s *authService) Register(ctx context.Context, user domain.User) error {
 	return s.sendVerificationEmail(verification)
 }
 
-func (s *authService) Login(ctx context.Context, user domain.User) (string, string, error) {
-	userFromDB, err := s.repo.Users().GetByEmail(ctx, user.Email, true)
+func (s *authService) Login(ctx context.Context, command port.LoginCommand) (string, string, error) {
+	email := normalizeRateLimitEmail(command.Email)
+	if err := s.allowRateLimit(ctx, "login_account", "email", email); err != nil {
+		return "", "", err
+	}
+	userFromDB, err := s.repo.Users().GetByEmail(ctx, command.Email, true)
 	if err != nil {
 		return "", "", fmt.Errorf(errGetUserByEmail, err)
 	}
@@ -66,7 +76,7 @@ func (s *authService) Login(ctx context.Context, user domain.User) (string, stri
 		return "", "", fmt.Errorf(errUserNotFound, domain.ErrNotFound)
 	}
 
-	if err := s.hasher.Compare(userFromDB.Password, user.Password); err != nil {
+	if err := s.hasher.Compare(userFromDB.PasswordHash, command.Password); err != nil {
 		return "", "", fmt.Errorf("invalid credentials: %w", domain.ErrUnauthenticated)
 	}
 
@@ -89,17 +99,21 @@ func (s *authService) Login(ctx context.Context, user domain.User) (string, stri
 		ParentID:  nil,
 		ExpiredAt: now.Add(7 * 24 * time.Hour),
 		CreatedAt: now,
-		IPAddress: user.IPAddress,
-		UserAgent: user.UserAgent,
+		IPAddress: command.IPAddress,
+		UserAgent: command.UserAgent,
 	}
 	if err := s.repo.Auth().CreateRefreshToken(ctx, rt); err != nil {
 		return "", "", fmt.Errorf("create refresh token: %w", err)
 	}
 
+	s.resetRateLimit(ctx, "login_account", "email", email)
 	return accessToken, rawRefresh, nil
 }
 
 func (s *authService) CreateVerifyEmail(ctx context.Context, email string) error {
+	if err := s.allowRateLimit(ctx, "verify_email", "email", normalizeRateLimitEmail(email)); err != nil {
+		return err
+	}
 	verification, err := createVerification(ctx, s.repo.Users(), s.repo.Auth(), email)
 	if err != nil {
 		return err
@@ -160,6 +174,9 @@ func (s *authService) VerifyEmail(ctx context.Context, id string) error {
 }
 
 func (s *authService) ForgotPassword(ctx context.Context, email string) error {
+	if err := s.allowRateLimit(ctx, "recovery_email", "email", normalizeRateLimitEmail(email)); err != nil {
+		return err
+	}
 	userFromDB, err := s.repo.Users().GetByEmail(ctx, email, false)
 	if err != nil {
 		return fmt.Errorf(errGetUserByEmail, err)
@@ -189,6 +206,9 @@ Click here to reset your password: <a href="%s/reset-password?id=%s">Reset Passw
 func (s *authService) ResetPassword(ctx context.Context, tokenID, newPassword string) error {
 	if _, err := uuid.Parse(tokenID); err != nil {
 		return fmt.Errorf("invalid reset token: %w", domain.ErrInvalidInput)
+	}
+	if err := s.allowRateLimit(ctx, "recovery_token", "token", tokenID); err != nil {
+		return err
 	}
 
 	hashed, err := s.hasher.Hash(newPassword)

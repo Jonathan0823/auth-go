@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -25,12 +26,22 @@ import (
 	outpassword "github.com/Jonathan0823/auth-go/internal/adapter/outbound/password"
 	outpostgres "github.com/Jonathan0823/auth-go/internal/adapter/outbound/postgres"
 	"github.com/Jonathan0823/auth-go/internal/core/port"
+	"github.com/Jonathan0823/auth-go/internal/core/ratelimit"
 	"github.com/Jonathan0823/auth-go/internal/core/service"
 )
 
 type integrationEmailSender struct{}
 
 func (integrationEmailSender) Send(string, string, string) error { return nil }
+
+type integrationRateLimitStore struct{}
+
+func (integrationRateLimitStore) Allow(context.Context, string, port.RateLimitPolicy) (port.RateLimitDecision, error) {
+	return port.RateLimitDecision{Allowed: true}, nil
+}
+func (integrationRateLimitStore) Reset(context.Context, string) error { return nil }
+func (integrationRateLimitStore) Backend() string                     { return "test" }
+func (integrationRateLimitStore) Close() error                        { return nil }
 
 func setupAuthServer(t *testing.T) (*gin.Engine, *pgxpool.Pool, port.Repository, port.TokenService) {
 	t.Helper()
@@ -51,7 +62,12 @@ func setupAuthServer(t *testing.T) (*gin.Engine, *pgxpool.Pool, port.Repository,
 
 	repo := outpostgres.NewRepository(pool)
 	tokens := outjwt.NewTokenService(os.Getenv("JWT_ACCESS_SECRET"), os.Getenv("REFRESH_TOKEN_HASH_KEY"))
-	svc := service.New(repo, tokens, integrationEmailSender{}, outpassword.NewHasher(), "http://localhost:8080")
+	policies := make(map[string]port.RateLimitPolicy)
+	for _, name := range []string{"register_email", "login_account", "verify_email", "recovery_email", "recovery_token"} {
+		policies[name] = port.RateLimitPolicy{Name: name, Limit: 1000, Window: time.Hour}
+	}
+	limiter := ratelimit.NewRateLimiter(integrationRateLimitStore{}, "integration-key", policies)
+	svc := service.New(repo, tokens, integrationEmailSender{}, outpassword.NewHasher(), "http://localhost:8080", limiter)
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
