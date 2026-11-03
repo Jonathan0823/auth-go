@@ -1,5 +1,5 @@
 # NOTE: If you need timezone accuracy later, add `import _ "time/tzdata"` in Go code.
-FROM golang:1.25.0-alpine AS builder
+FROM golang:1.27.3-alpine AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
